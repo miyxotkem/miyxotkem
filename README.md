@@ -1,116 +1,117 @@
-<!-- HEADER BANNER WITH ANIMATED GLOW -->
+<!-- 🌟 ABSOLUTE HERO SECTION 🌟 -->
 <p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=rect&color=0:0d1117,100:0369a1&height=180&section=header&text=MIYXOTKEM&fontSize=70&fontColor=38bdf8&animation=twinkle" width="100%" alt="Header Banner" />
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:0d1117,100:00e5ff&height=200&section=header&text=MIYXOTKEM&fontSize=80&fontColor=ffffff&animation=twinkle&desc=Software%20Architect%20|%20AI%20Researcher&descAlignY=75&descAlign=62" width="100%" alt="Hero Banner" />
 </p>
 
-<!-- DYNAMIC TYPING TEXT -->
+<!-- 🏆 DYNAMIC GITHUB TROPHIES (Updates automatically based on your activity) -->
 <p align="center">
-  <a href="https://github.com/miyxotkem">
-    <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=22&pause=1000&color=38BDF8&center=true&vCenter=true&width=600&lines=Software+Engineer+%40+UIT;Computer+Vision+%26+AIOps+Researcher;Full-Stack+.NET+%26+Cloud+Architect;Deep+Learning+for+UAV+Detection" alt="Typing SVG" />
+  <a href="https://github.com/ryo-ma/github-profile-trophy">
+    <img src="https://github-profile-trophy.vercel.app/?username=miyxotkem&theme=radical&row=1&column=7&margin-w=15&margin-h=15&no-frame=true&no-bg=true" alt="miyxotkem trophies" />
   </a>
 </p>
 
-<!-- PROFILE BADGES & VISITOR COUNTER -->
 <p align="center">
-  <a href="https://github.com/miyxotkem?tab=followers"><img src="https://img.shields.io/github/followers/miyxotkem?label=Followers&style=for-the-badge&color=0e7490&logo=github" /></a>
-  <a href="https://github.com/miyxotkem"><img src="https://img.shields.io/github/stars/miyxotkem?label=Total%20Stars&style=for-the-badge&color=0284c7&logo=github" /></a>
-  <img src="https://komarev.com/ghpvc/?username=miyxotkem&color=0369a1&style=for-the-badge&label=Profile+Views" />
+  <a href="https://github.com/miyxotkem">
+    <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=24&pause=1000&color=00E5FF&center=true&vCenter=true&width=800&lines=System.out.println(%22Hello+World!%22);Initializing+Computer+Vision+Models...;Deploying+AIOps+Architecture...;Pushing+C%23+.NET+Microservices...;Target+Locked:+UAV+Detection+Active" alt="Typing SVG" />
+  </a>
 </p>
 
-<br />
+<br/>
 
-<!-- TERMINAL ABOUT ME -->
-<table align="center" width="100%">
+<!-- 💻 HOLOGRAPHIC TERMINAL BIO -->
+<div align="center">
+  <table border="0" width="80%">
+    <tr>
+      <td bgcolor="#0d1117">
+<pre>
+<font color="#00e5ff"><b>root@miyxotkem-mainframe</b></font>:<font color="#58a6ff"><b>~</b></font>$ ./execute_profile.sh
+[+] <b>ACCESS GRANTED.</b> Loading developer profile...
+
+> <b>STATUS:</b> Software Engineering @ University of Information Technology (UIT)
+> <b>MISSION:</b> Bridging the gap between robust software architecture and Artificial Intelligence.
+> <b>CURRENT_RESEARCH:</b> Deep Learning pipelines for real-time UAV (Drone) Detection.
+> <b>SPECIALIZATIONS:</b> Full-Stack Desktop (.NET/WPF), Computer Vision, AIOps, Cloud Infrastructure.
+> <b>LOCATION:</b> Ho Chi Minh City, Vietnam 🇻🇳
+
+[+] Profile loaded successfully. Welcome back, Commander.
+</pre>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<br/>
+
+<!-- ⚙️ ANIMATED TECH STACK (Using Skillicons for a modern, uniform look) -->
+<h2 align="center">🔮 Technological Arsenal</h2>
+<p align="center">
+  <em>Languages, Frameworks, and Infrastructure engineered for high performance.</em>
+</p>
+
+<p align="center">
+  <a href="https://skillicons.dev">
+    <img src="https://skillicons.dev/icons?i=cs,dotnet,py,c,cpp,aws,kubernetes,docker,firebase,gcp,git,github&perline=12" />
+  </a>
+</p>
+<p align="center">
+  <a href="https://skillicons.dev">
+    <img src="https://skillicons.dev/icons?i=vscode,visualstudio,idea,windows,linux,sqlite,mysql,tensorflow,pytorch,opencv,figma,postman&perline=12" />
+  </a>
+</p>
+
+<br/>
+
+<!-- 🚀 SHOWCASE PROJECTS -->
+<h2 align="center">🛸 Deployed Systems & Research</h2>
+
+<table width="100%" align="center">
   <tr>
-    <td bgcolor="#0d1117">
-      <pre>
-<font color="#38bdf8"><b>miyxotkem@uit-terminal:~$</b> cat system_info.json</font>
-{
-  <font color="#7dd3fc">"role"</font>: <font color="#fde047">"Software Engineering Student @ UIT"</font>,
-  <font color="#7dd3fc">"specializations"</font>: [<font color="#fde047">"Computer Vision"</font>, <font color="#fde047">"AIOps"</font>, <font color="#fde047">"Cloud Architecture"</font>],
-  <font color="#7dd3fc">"current_research"</font>: <font color="#fde047">"Deep Learning models for UAV Detection using Hugging Face"</font>,
-  <font color="#7dd3fc">"primary_stack"</font>: [<font color="#fde047">"C#"</font>, <font color="#fde047">".NET"</font>, <font color="#fde047">"WPF"</font>, <font color="#fde047">"SQL Server"</font>, <font color="#fde047">"Python"</font>],
-  <font color="#7dd3fc">"cloud_devops"</font>: [<font color="#fde047">"AWS"</font>, <font color="#fde047">"Kubernetes"</font>, <font color="#fde047">"CI/CD Pipelines"</font>],
-  <font color="#7dd3fc">"location"</font>: <font color="#fde047">"Ho Chi Minh City, Vietnam 🇻🇳"</font>,
-  <font color="#7dd3fc">"status"</font>: <font color="#fde047">"⚡ Architecting robust & intelligent software solutions"</font>
-}
-      </pre>
+    <td width="50%" valign="top" bgcolor="#0d1117">
+      <h3 align="center"><font color="#00e5ff">🚁 UAV Detection Engine</font></h3>
+      <p align="center"><i>AIOps & Computer Vision Research</i></p>
+      <p>Engineered deep learning pipelines leveraging <b>Hugging Face</b> and <b>OpenCV</b> to detect Unmanned Aerial Vehicles in real-time. Focuses on minimizing latency and integrating AIOps for model monitoring.</p>
+    </td>
+    <td width="50%" valign="top" bgcolor="#0d1117">
+      <h3 align="center"><font color="#00e5ff">📚 Cloud E-Learning Hub</font></h3>
+      <p align="center"><i>Full-Stack Desktop Architecture</i></p>
+      <p>A highly scalable educational management system featuring real-time state synchronizations. Architected using <b>C#, WPF, XAML,</b> and seamlessly integrated with <b>Firebase</b> cloud databases.</p>
     </td>
   </tr>
 </table>
 
-<br />
+<br/>
 
-<!-- TECH STACK MATRIX -->
-<h2 align="center">⚙️ Technical Arsenal</h2>
+<!-- 📈 MASSIVE DATA VISUALIZATION -->
+<h2 align="center">📊 Activity & Contributions Matrix</h2>
 
+<!-- Contribution Graph -->
 <p align="center">
-  <b>Languages & Frameworks</b><br />
-  <img src="https://img.shields.io/badge/C%23-239120?style=for-the-badge&logo=c-sharp&logoColor=white" />
-  <img src="https://img.shields.io/badge/.NET-5C2D91?style=for-the-badge&logo=.net&logoColor=white" />
-  <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" />
-  <img src="https://img.shields.io/badge/WPF-512BD4?style=for-the-badge&logo=windows&logoColor=white" />
-  <img src="https://img.shields.io/badge/XAML-0C54CE?style=for-the-badge&logo=xaml&logoColor=white" />
+  <img src="https://github-readme-activity-graph.vercel.app/graph?username=miyxotkem&bg_color=0d1117&color=00e5ff&line=58a6ff&point=ffffff&area=true&hide_border=true" width="100%" alt="miyxotkem's Activity Graph" />
 </p>
 
+<!-- Stats Cards Grid -->
 <p align="center">
-  <b>AI, Cloud & DevOps</b><br />
-  <img src="https://img.shields.io/badge/AWS-232F3E?style=for-the-badge&logo=amazon-aws&logoColor=white" />
-  <img src="https://img.shields.io/badge/Kubernetes-326CE5?style=for-the-badge&logo=kubernetes&logoColor=white" />
-  <img src="https://img.shields.io/badge/Hugging%20Face-FFD21E?style=for-the-badge&logo=huggingface&logoColor=black" />
-  <img src="https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black" />
-  <img src="https://img.shields.io/badge/GitHub%20Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white" />
+  <img src="https://github-readme-stats.vercel.app/api?username=miyxotkem&show_icons=true&theme=radical&hide_border=true&bg_color=0d1117&title_color=00e5ff" alt="Stats" height="175" />
+  <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=miyxotkem&layout=compact&theme=radical&hide_border=true&bg_color=0d1117&title_color=00e5ff" alt="Languages" height="175" />
 </p>
 
+<!-- 3D Isometric Contribution Graph -->
 <p align="center">
-  <b>Databases & Core Tools</b><br />
-  <img src="https://img.shields.io/badge/SQL%20Server-CC2927?style=for-the-badge&logo=microsoft-sql-server&logoColor=white" />
-  <img src="https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=git&logoColor=white" />
-  <img src="https://img.shields.io/badge/VS%20Code-007ACC?style=for-the-badge&logo=visual-studio-code&logoColor=white" />
+  <img src="https://github-readme-3d-contrib.vercel.app/api?username=miyxotkem&theme=github-dark&color_width=6" alt="3D Contribution Graph" />
 </p>
 
-<br />
-
-<!-- FEATURED PROJECTS SHOWCASE -->
-<h2 align="center">🛸 Key Projects & Research</h2>
-
-<table align="center" width="100%">
-  <tr>
-    <td width="33%" valign="top">
-      <h3 align="center">🚁 UAV Detection Research</h3>
-      <p align="center">Research on Deep Learning and Computer Vision algorithms focused on real-time detection of Unmanned Aerial Vehicles and AIOps execution.</p>
-      <p align="center"><code>Python</code> • <code>Hugging Face</code> • <code>OpenCV</code></p>
-    </td>
-    <td width="33%" valign="top">
-      <h3 align="center">📚 E-Learning Platform</h3>
-      <p align="center">A comprehensive desktop educational system with cloud synchronizations, real-time state management, and modern user interface design.</p>
-      <p align="center"><code>C#</code> • <code>WPF</code> • <code>XAML</code> • <code>Firebase</code></p>
-    </td>
-    <td width="33%" valign="top">
-      <h3 align="center">🎬 Movie Manager</h3>
-      <p align="center">Desktop software emphasizing software architecture rigor, complex relational database schemas, and optimized CRUD operations.</p>
-      <p align="center"><code>C#</code> • <code>WinForms</code> • <code>SQL Server</code></p>
-    </td>
-  </tr>
-</table>
-
-<br />
-
-<!-- GITHUB PERFORMANCE METRICS -->
-<h2 align="center">📊 GitHub Metrics Matrix</h2>
-
+<!-- 🐍 THE GITHUB SNAKE (Requires GitHub Actions setup) -->
+<h3 align="center">🐍 Contribution Snake</h3>
 <p align="center">
-  <img src="https://github-readme-stats.vercel.app/api?username=miyxotkem&show_icons=true&theme=tokyonight&hide_border=true&count_private=true" alt="Stats" height="165" />
-  <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=miyxotkem&layout=compact&theme=tokyonight&hide_border=true" alt="Languages" height="165" />
+  <em>(Note: To make this snake move, setup the <a href="https://github.com/Platane/snk">Platane/snk Action</a>)</em><br>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/miyxotkem/miyxotkem/output/github-contribution-grid-snake-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/miyxotkem/miyxotkem/output/github-contribution-grid-snake.svg">
+    <img alt="github contribution grid snake animation" src="https://raw.githubusercontent.com/miyxotkem/miyxotkem/output/github-contribution-grid-snake.svg">
+  </picture>
 </p>
-
-<p align="center">
-  <img src="https://github-readme-streak-stats.herokuapp.com/?user=miyxotkem&theme=tokyonight&hide_border=true" alt="Streak" />
-</p>
-
-<br />
 
 <!-- FOOTER -->
 <p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&color=0369a1&height=100&section=footer" width="100%" />
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:00e5ff,100:0d1117&height=100&section=footer" width="100%" />
 </p>
