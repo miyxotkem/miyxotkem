@@ -91,13 +91,13 @@
 
 <!-- Stats Cards Grid -->
 <p align="center">
-  <img src="https://github-readme-stats.vercel.app/api?username=miyxotkem&amp;show_icons=true&amp;theme=radical&amp;hide_border=true&amp;bg_color=0d1117&amp;title_color=00e5ff" alt="Stats" height="175" />
-  <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=miyxotkem&amp;layout=compact&amp;theme=radical&amp;hide_border=true&amp;bg_color=0d1117&amp;title_color=00e5ff" alt="Languages" height="175" />
+  <img src="https://github-readme-stats.vercel.app/api?username=miyxotkem&show_icons=true&theme=radical&hide_border=true&bg_color=0d1117&title_color=00e5ff" alt="Stats" height="175" />
+  <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=miyxotkem&layout=compact&theme=radical&hide_border=true&bg_color=0d1117&title_color=00e5ff" alt="Languages" height="175" />
 </p>
 
 <!-- 3D Isometric Contribution Graph -->
 <p align="center">
-  <img src="https://github-readme-3d-contrib.vercel.app/api?username=miyxotkem&amp;theme=github-dark&amp;color_width=6" alt="3D Contribution Graph" />
+  <img src="https://github-readme-3d-contrib.vercel.app/api?username=miyxotkem&theme=github-dark" alt="3D Contribution Graph" />
 </p>
 
 <!-- 🐍 THE GITHUB SNAKE -->
