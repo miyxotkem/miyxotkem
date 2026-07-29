@@ -102,8 +102,7 @@
 
 <!-- 🐍 THE GITHUB SNAKE -->
 <h3 align="center">🐍 Contribution Snake</h3>
-<p align="center">
-  <em>(Note: You must setup the <a href="https://github.com/Platane/snk">Platane/snk Action</a> in your repo to generate this image)</em><br>
+<p align="center"><br>
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/miyxotkem/miyxotkem/output/github-contribution-grid-snake-dark.svg">
     <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/miyxotkem/miyxotkem/output/github-contribution-grid-snake.svg">
