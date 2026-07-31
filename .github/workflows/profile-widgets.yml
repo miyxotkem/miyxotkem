@@ -39,7 +39,7 @@ jobs:
           base: "header, activity, community, repositories, metadata"
           config_timezone: Asia/Ho_Chi_Minh
           output_action: none
-          filename: dist/metrics-stats.svg
+          filename: metrics-stats.svg
 
       # ── Top languages card (replaces github-readme-stats "Languages") ──
       - name: Generate metrics-languages.svg
@@ -54,7 +54,7 @@ jobs:
           plugin_languages_limit: 8
           plugin_languages_details: percentage
           output_action: none
-          filename: dist/metrics-languages.svg
+          filename: metrics-languages.svg
 
       # ── Achievements (replaces the broken github-profile-trophy) ──
       - name: Generate metrics-achievements.svg
@@ -68,7 +68,7 @@ jobs:
           plugin_achievements_threshold: C
           plugin_achievements_display: compact
           output_action: none
-          filename: dist/metrics-achievements.svg
+          filename: metrics-achievements.svg
 
       # ── Isometric contribution calendar (replaces github-readme-3d-contrib) ──
       - name: Generate metrics-isocalendar.svg
@@ -81,7 +81,21 @@ jobs:
           plugin_isocalendar: yes
           plugin_isocalendar_duration: full-year
           output_action: none
-          filename: dist/metrics-isocalendar.svg
+          filename: metrics-isocalendar.svg
+
+      # ── Collect the 4 metrics files from /metrics_renders into dist/ ──
+      # (this is the step that was MISSING before — output_action: none writes
+      #  files to /metrics_renders/{filename}, not to the workspace directly)
+      - name: Collect metrics renders into dist/
+        run: |
+          mkdir -p dist
+          ls -la /metrics_renders || true
+          cp /metrics_renders/metrics-stats.svg dist/
+          cp /metrics_renders/metrics-languages.svg dist/
+          cp /metrics_renders/metrics-achievements.svg dist/
+          cp /metrics_renders/metrics-isocalendar.svg dist/
+          echo "dist/ now contains:"
+          ls -la dist/
 
       # ── Push everything (snake + metrics) to the "output" branch in one go ──
       - name: Push to output branch
