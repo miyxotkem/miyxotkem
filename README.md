@@ -3,16 +3,14 @@
   <img src="https://capsule-render.vercel.app/api?type=waving&color=0:0d1117,100:00e5ff&height=200&section=header&text=MIYXOTKEM&fontSize=80&fontColor=ffffff&animation=twinkle&desc=Software%20Architect%20|%20AI%20Researcher&descAlignY=75&descAlign=62" width="100%" alt="Hero Banner" />
 </p>
 
-<!-- 🏆 DYNAMIC GITHUB TROPHIES -->
+<!-- 🏆 ACHIEVEMENTS (static SVG, replaces the broken live github-profile-trophy widget) -->
 <p align="center">
-  <a href="https://github.com/ryo-ma/github-profile-trophy">
-    <img src="https://github-profile-trophy.vercel.app/?username=miyxotkem&amp;theme=radical&amp;row=1&amp;column=7&amp;margin-w=15&amp;margin-h=15&amp;no-frame=true&amp;no-bg=true" alt="miyxotkem trophies" />
-  </a>
+  <img src="https://raw.githubusercontent.com/miyxotkem/miyxotkem/output/metrics-achievements.svg" alt="miyxotkem achievements" />
 </p>
 
 <p align="center">
   <a href="https://github.com/miyxotkem">
-    <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&amp;weight=600&amp;size=24&amp;pause=1000&amp;color=00E5FF&amp;center=true&amp;vCenter=true&amp;width=800&amp;lines=System.out.println(%22Hello+World!%22);Initializing+Computer+Vision+Models...;Deploying+AIOps+Architecture...;Pushing+C%23+.NET+Microservices...;Target+Locked:+UAV+Detection+Active" alt="Typing SVG" />
+    <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=24&pause=1000&color=00E5FF&center=true&vCenter=true&width=800&lines=System.out.println(%22Hello+World!%22);Initializing+Computer+Vision+Models...;Deploying+AIOps+Architecture...;Pushing+C%23+.NET+Microservices...;Target+Locked:+UAV+Detection+Active" alt="Typing SVG" />
   </a>
 </p>
 
@@ -50,25 +48,25 @@
 
 <p align="center">
   <a href="https://skillicons.dev">
-    <img src="https://skillicons.dev/icons?i=cs,dotnet,py,c,cpp,aws,kubernetes,docker,firebase,gcp,git,github&amp;perline=12" />
+    <img src="https://skillicons.dev/icons?i=cs,dotnet,py,c,cpp,aws,kubernetes,docker,firebase,gcp,git,github&perline=12" />
   </a>
 </p>
 <p align="center">
   <a href="https://skillicons.dev">
-    <img src="https://skillicons.dev/icons?i=vscode,visualstudio,idea,windows,linux,sqlite,mysql,tensorflow,pytorch,opencv,figma,postman&amp;perline=12" />
+    <img src="https://skillicons.dev/icons?i=vscode,visualstudio,idea,windows,linux,sqlite,mysql,tensorflow,pytorch,opencv,figma,postman&perline=12" />
   </a>
 </p>
 
 <br/>
 
 <!-- 🚀 SHOWCASE PROJECTS -->
-<h2 align="center">🛸 Deployed Systems & Research</h2>
+<h2 align="center">🛸 Deployed Systems and Research</h2>
 
 <table width="100%" align="center">
   <tr>
     <td width="50%" valign="top" bgcolor="#0d1117">
       <h3 align="center"><font color="#00e5ff">🚁 UAV Detection Engine</font></h3>
-      <p align="center"><i>AIOps & Computer Vision Research</i></p>
+      <p align="center"><i>AIOps and Computer Vision Research</i></p>
       <p>Engineered deep learning pipelines leveraging <b>Hugging Face</b> and <b>OpenCV</b> to detect Unmanned Aerial Vehicles in real-time. Focuses on minimizing latency and integrating AIOps for model monitoring.</p>
     </td>
     <td width="50%" valign="top" bgcolor="#0d1117">
@@ -82,22 +80,22 @@
 <br/>
 
 <!-- 📈 MASSIVE DATA VISUALIZATION -->
-<h2 align="center">📊 Activity & Contributions Matrix</h2>
+<h2 align="center">📊 Activity and Contributions Matrix</h2>
 
 <!-- Contribution Graph -->
 <p align="center">
-  <img src="https://github-readme-activity-graph.vercel.app/graph?username=miyxotkem&amp;bg_color=0d1117&amp;color=00e5ff&amp;line=58a6ff&amp;point=ffffff&amp;area=true&amp;hide_border=true" width="100%" alt="miyxotkem's Activity Graph" />
+  <img src="https://github-readme-activity-graph.vercel.app/graph?username=miyxotkem&bg_color=0d1117&color=00e5ff&line=58a6ff&point=ffffff&area=true&hide_border=true" width="100%" alt="miyxotkem's Activity Graph" />
 </p>
 
-<!-- Stats Cards Grid -->
+<!-- Stats Cards (static SVG, replaces the broken live github-readme-stats "Stats" card) -->
 <p align="center">
-  <img src="https://github-readme-stats.vercel.app/api?username=miyxotkem&show_icons=true&theme=radical&hide_border=true&bg_color=0d1117&title_color=00e5ff" alt="Stats" height="175" />
-  <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=miyxotkem&layout=compact&theme=radical&hide_border=true&bg_color=0d1117&title_color=00e5ff" alt="Languages" height="175" />
+  <img src="https://raw.githubusercontent.com/miyxotkem/miyxotkem/output/metrics-stats.svg" alt="Stats" width="49%" />
+  <img src="https://raw.githubusercontent.com/miyxotkem/miyxotkem/output/metrics-languages.svg" alt="Languages" width="49%" />
 </p>
 
-<!-- 3D Isometric Contribution Graph -->
+<!-- 3D Isometric Contribution Calendar (static SVG, replaces the broken github-readme-3d-contrib) -->
 <p align="center">
-  <img src="https://github-readme-3d-contrib.vercel.app/api?username=miyxotkem&theme=github-dark" alt="3D Contribution Graph" />
+  <img src="https://raw.githubusercontent.com/miyxotkem/miyxotkem/output/metrics-isocalendar.svg" alt="Isometric Contribution Calendar" />
 </p>
 
 <!-- 🐍 THE GITHUB SNAKE -->
@@ -112,5 +110,5 @@
 
 <!-- FOOTER -->
 <p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&amp;color=0:00e5ff,100:0d1117&amp;height=100&amp;section=footer" width="100%" />
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:00e5ff,100:0d1117&height=100&section=footer" width="100%" />
 </p>
