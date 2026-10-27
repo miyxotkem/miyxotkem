@@ -1,4 +1,4 @@
-name: Generate Profile Widgets (Snake + Metrics)
+name: Generate Profile Widgets (Snake + Telemetry)
 
 on:
   # Run automatically every 12 hours
@@ -14,7 +14,7 @@ on:
       - main
 
 jobs:
-  build:
+  snake:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -31,29 +31,6 @@ jobs:
           outputs: |
             dist/github-contribution-grid-snake.svg
             dist/github-contribution-grid-snake-dark.svg?palette=github-dark
-
-      # ── Achievements Badge ──
-      - name: Generate metrics-achievements.svg
-        uses: lowlighter/metrics@latest
-        continue-on-error: true
-        with:
-          token: ${{ secrets.METRICS_TOKEN || secrets.GITHUB_TOKEN }}
-          user: miyxotkem
-          template: classic
-          base: ""
-          plugin_achievements: yes
-          plugin_achievements_threshold: C
-          plugin_achievements_display: compact
-          output_action: none
-          filename: metrics-achievements.svg
-
-      # ── Collect renders into dist/ ──
-      - name: Collect metrics renders into dist/
-        run: |
-          mkdir -p dist
-          [ -f /metrics_renders/metrics-achievements.svg ] && cp /metrics_renders/metrics-achievements.svg dist/ || true
-          echo "dist/ now contains:"
-          ls -la dist/
 
       # ── Push to output branch ──
       - name: Push to output branch

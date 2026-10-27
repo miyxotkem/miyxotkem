@@ -3,11 +3,6 @@
   <img src="https://capsule-render.vercel.app/api?type=waving&color=0:0d1117,100:00e5ff&height=200&section=header&text=MIYXOTKEM&fontSize=80&fontColor=ffffff&animation=twinkle&desc=Software%20Architect%20|%20AI%20Researcher&descAlignY=75&descAlign=62" width="100%" alt="Hero Banner" />
 </p>
 
-<!-- 🏆 ACHIEVEMENTS -->
-<p align="center">
-  <img src="https://raw.githubusercontent.com/miyxotkem/miyxotkem/output/metrics-achievements.svg" alt="miyxotkem achievements" />
-</p>
-
 <p align="center">
   <a href="https://github.com/miyxotkem">
     <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=24&pause=1000&color=00E5FF&center=true&vCenter=true&width=800&lines=System.out.println(%22Hello+World!%22);Initializing+Computer+Vision+Models...;Deploying+AIOps+Architecture...;Pushing+C%23+.NET+Microservices...;Target+Locked:+UAV+Detection+Active" alt="Typing SVG" />
