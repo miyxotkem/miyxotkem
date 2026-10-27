@@ -1,4 +1,4 @@
-name: Generate Profile Widgets (Snake + Telemetry)
+name: Generate Profile Widgets (Snake)
 
 on:
   # Run automatically every 12 hours
@@ -41,19 +41,3 @@ jobs:
           keep_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # ── Telemetry update for README.md ──
-  telemetry:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-      - name: Update Live System Telemetry
-        uses: jamesgeorge007/github-activity-readme@master
-        continue-on-error: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          COMMIT_MSG: "chore: update live system logs [skip ci]"
-          MAX_LINES: 5

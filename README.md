@@ -104,27 +104,6 @@
 
 <br/>
 
-<!-- ⚡ RECENT TELEMETRY LOGS -->
-<h2 align="center">🛰️ Live System Telemetry</h2>
-<div align="center">
-  <table border="0" width="85%">
-    <tr>
-      <td bgcolor="#0d1117">
-<pre>
-<font color="#00e5ff"><b>[SYSTEM_LOG]</b></font> <font color="#58a6ff">Latest telemetry stream initialized.</font>
-<!--START_SECTION:activity-->
-1. 🎉 Merged PR [#18](https://github.com/phamhuy273/se347-smart-travel-planner/pull/18) in [phamhuy273/se347-smart-travel-planner](https://github.com/phamhuy273/se347-smart-travel-planner)
-2. 💪 Opened PR [#18](https://github.com/phamhuy273/se347-smart-travel-planner/pull/18) in [phamhuy273/se347-smart-travel-planner](https://github.com/phamhuy273/se347-smart-travel-planner)
-3. 🎉 Merged PR [#17](https://github.com/phamhuy273/se347-smart-travel-planner/pull/17) in [phamhuy273/se347-smart-travel-planner](https://github.com/phamhuy273/se347-smart-travel-planner)
-<!--END_SECTION:activity-->
-</pre>
-      </td>
-    </tr>
-  </table>
-</div>
-
-<br/>
-
 <!-- 📡 ENCRYPTED COMMS MATRIX -->
 <h2 align="center">📡 Encrypted Comms Matrix</h2>
 <p align="center">
