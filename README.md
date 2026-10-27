@@ -120,9 +120,6 @@
   <a href="mailto:24521293@gm.uit.edu.vn">
     <img src="https://img.shields.io/badge/Academic_Comms-24521293%40gm.uit.edu.vn-58a6ff?style=for-the-badge&logo=googleclassroom&logoColor=white" alt="UIT Email" />
   </a>
-  <a href="https://github.com/miyxotkem">
-    <img src="https://img.shields.io/badge/GitHub-miyxotkem-161b22?style=for-the-badge&logo=github&logoColor=00e5ff" alt="GitHub Profile" />
-  </a>
 </p>
 
 <br/>
