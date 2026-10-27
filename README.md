@@ -23,15 +23,15 @@
       <td bgcolor="#0d1117">
 <pre>
 <font color="#00e5ff"><b>root@miyxotkem-mainframe</b></font>:<font color="#58a6ff"><b>~</b></font>$ ./execute_profile.sh
-[+] <b>ACCESS GRANTED.</b> Loading developer profile...
+[+] <b>ACCESS GRANTED.</b> Initializing developer telemetry...
 
-> <b>STATUS:</b> Software Engineering @ University of Information Technology (UIT)
+> <b>IDENTITY:</b> Thinh Phat Ho (miyxotkem) // Software Engineering @ UIT (VNUHCM) 🇻🇳
 > <b>MISSION:</b> Bridging the gap between robust software architecture and Artificial Intelligence.
-> <b>CURRENT_RESEARCH:</b> Deep Learning pipelines for real-time UAV (Drone) Detection.
-> <b>SPECIALIZATIONS:</b> Full-Stack Desktop (.NET/WPF), Computer Vision, AIOps, Cloud Infrastructure.
-> <b>LOCATION:</b> Ho Chi Minh City, Vietnam 🇻🇳
+> <b>RESEARCH:</b> Deep Learning pipelines for real-time UAV (Drone) Detection.
+> <b>SPECIALIZATION:</b> Full-Stack Desktop (.NET/WPF), Computer Vision, AIOps, Cloud Infrastructure.
+> <b>COMPUTE_RIG:</b> Windows 11 + WSL2 Ubuntu • NVIDIA RTX GPU (CUDA/cuDNN) • .NET 8 / PyTorch
 
-[+] Profile loaded successfully. Welcome back, Commander.
+[+] Mainframe online. Systems operational.
 </pre>
       </td>
     </tr>
@@ -79,7 +79,7 @@
 
 <br/>
 
-<!-- 📈 MASSIVE DATA VISUALIZATION -->
+<!-- 📈 DATA VISUALIZATION -->
 <h2 align="center">📊 Activity and Contributions Matrix</h2>
 
 <!-- Streak Stats -->
@@ -91,25 +91,6 @@
 <p align="center">
   <img src="https://github-profile-summary-cards.vercel.app/api/cards/productive-time?username=miyxotkem&theme=github_dark&utcOffset=7" alt="Productive Time Card" width="49%" />
   <img src="https://github-profile-summary-cards.vercel.app/api/cards/repos-per-language?username=miyxotkem&theme=github_dark" alt="Repos per Language Card" width="49%" />
-</p>
-
-<!-- 30-Day Contribution Graph -->
-<p align="center">
-  <img src="https://activity-graph.vercel.app/graph?username=miyxotkem&bg_color=0d1117&color=00e5ff&line=58a6ff&point=ffffff&area=true&hide_border=true" width="100%" alt="miyxotkem's Activity Graph" />
-</p>
-
-<!-- Stats & Languages Metrics -->
-<p align="center">
-  <img src="https://raw.githubusercontent.com/miyxotkem/miyxotkem/output/metrics-stats.svg" alt="Stats" width="49%" />
-  <img src="https://raw.githubusercontent.com/miyxotkem/miyxotkem/output/metrics-languages.svg" alt="Languages" width="49%" />
-</p>
-
-<!-- Isometric Calendar & Coding Habits -->
-<p align="center">
-  <img src="https://raw.githubusercontent.com/miyxotkem/miyxotkem/output/metrics-isocalendar.svg" alt="Isometric Contribution Calendar" />
-</p>
-<p align="center">
-  <img src="https://raw.githubusercontent.com/miyxotkem/miyxotkem/output/metrics-habits.svg" alt="Coding Habits" />
 </p>
 
 <!-- 🐍 THE GITHUB SNAKE -->
@@ -145,38 +126,6 @@
 
 <br/>
 
-<!-- 🖥️ WORKSTATION & NEURAL RIG TELEMETRY -->
-<h2 align="center">🖥️ Workstation and Neural Rig Telemetry</h2>
-<div align="center">
-  <table border="0" width="85%">
-    <tr>
-      <td bgcolor="#0d1117">
-<pre>
-<font color="#00e5ff"><b>[SYSTEM_HARDWARE]</b></font> <font color="#58a6ff">Querying local workstation diagnostics...</font>
-
-  ▸ <b>HOST_ENVIRONMENT :</b> Windows 11 Pro // WSL2 Ubuntu Linux (Kernel 5.15+)
-  ▸ <b>NEURAL_ACCELERATOR:</b> NVIDIA GeForce RTX Series (CUDA / cuDNN / TensorRT)
-  ▸ <b>PRIMARY_RUNTIMES  :</b> .NET 8 / 9 SDK • Python 3.11+ • C++20 Toolchain
-  ▸ <b>AI_STACK          :</b> PyTorch • OpenCV • Hugging Face Transformers
-  ▸ <b>IDE_MAINFRAME     :</b> Visual Studio 2022 • VS Code • JetBrains Rider
-  ▸ <b>SYSTEM_STATUS     :</b> 100% Operational // Hyper-threading &amp; Virtualization Active
-</pre>
-      </td>
-    </tr>
-  </table>
-</div>
-
-<br/>
-
-<!-- 🎧 AUDIO STREAM -->
-<p align="center">
-  <a href="https://open.spotify.com">
-    <img src="https://raw.githubusercontent.com/miyxotkem/miyxotkem/output/spotify-status.svg" alt="Spotify Listening Status" />
-  </a>
-</p>
-
-<br/>
-
 <!-- 📡 ENCRYPTED COMMS MATRIX -->
 <h2 align="center">📡 Encrypted Comms Matrix</h2>
 <p align="center">
@@ -194,22 +143,6 @@
     <img src="https://img.shields.io/badge/GitHub-miyxotkem-161b22?style=for-the-badge&logo=github&logoColor=00e5ff" alt="GitHub Profile" />
   </a>
 </p>
-
-<div align="center">
-  <table border="0" width="85%">
-    <tr>
-      <td bgcolor="#0d1117">
-<pre>
-<font color="#00e5ff"><b>[FREQUENCY_CHANNELS]</b></font>
-  ▸ <b>PRIMARY_DISPATCH :</b> <a href="mailto:hothinhphat06@gmail.com"><font color="#58a6ff">hothinhphat06@gmail.com</font></a>
-  ▸ <b>ACADEMIC_CHANNEL :</b> <a href="mailto:24521293@gm.uit.edu.vn"><font color="#58a6ff">24521293@gm.uit.edu.vn</font></a> [UIT - VNUHCM]
-  ▸ <b>PGP_FINGERPRINT  :</b> <font color="#8b949e">4A9F 82C1 E71D B054 993E 2108 MIYX OTKE M001</font>
-  ▸ <b>RESPONSE_WINDOW  :</b> &lt; 24h // Transmission line secure
-</pre>
-      </td>
-    </tr>
-  </table>
-</div>
 
 <br/>
 
