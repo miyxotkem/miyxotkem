@@ -114,6 +114,9 @@
   <a href="https://github.com/miyxotkem/miyxotkem/blob/main/resume.pdf">
     <img src="https://img.shields.io/badge/Curriculum_Vitae-DOWNLOAD_CV-00e5ff?style=for-the-badge&logo=googledocs&logoColor=0d1117" alt="Download CV" />
   </a>
+</p>
+
+<p align="center">
   <a href="mailto:hothinhphat06@gmail.com">
     <img src="https://img.shields.io/badge/Direct_Dispatch-hothinhphat06%40gmail.com-00e5ff?style=for-the-badge&logo=gmail&logoColor=0d1117" alt="Direct Email" />
   </a>
