@@ -9,6 +9,10 @@
   </a>
 </p>
 
+<p align="center">
+  <img src="https://komarev.com/ghpvc/?username=miyxotkem&label=MAINFRAME_VISITORS&color=00e5ff&style=flat-square" alt="Mainframe Visitors" />
+</p>
+
 <br/>
 
 <!-- 💻 HOLOGRAPHIC TERMINAL BIO -->
@@ -72,6 +76,15 @@
   </tr>
 </table>
 
+<p align="center">
+  <a href="https://github.com/miyxotkem/SE104_SmartEdu">
+    <img src="https://github-readme-stats.vercel.app/api/pin/?username=miyxotkem&repo=SE104_SmartEdu&theme=github_dark&bg_color=0d1117&border_color=00e5ff&title_color=00e5ff" alt="SE104_SmartEdu Pin" />
+  </a>
+  <a href="https://github.com/miyxotkem/SE100_DatPhongKhachSan">
+    <img src="https://github-readme-stats.vercel.app/api/pin/?username=miyxotkem&repo=SE100_DatPhongKhachSan&theme=github_dark&bg_color=0d1117&border_color=00e5ff&title_color=00e5ff" alt="SE100_DatPhongKhachSan Pin" />
+  </a>
+</p>
+
 <br/>
 
 <!-- 📈 DATA VISUALIZATION -->
@@ -128,6 +141,9 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/miyxotkem/miyxotkem/blob/main/resume.pdf">
+    <img src="https://img.shields.io/badge/Curriculum_Vitae-DOWNLOAD_CV-00e5ff?style=for-the-badge&logo=googledocs&logoColor=0d1117" alt="Download CV" />
+  </a>
   <a href="mailto:hothinhphat06@gmail.com">
     <img src="https://img.shields.io/badge/Direct_Dispatch-hothinhphat06%40gmail.com-00e5ff?style=for-the-badge&logo=gmail&logoColor=0d1117" alt="Direct Email" />
   </a>
