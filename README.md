@@ -133,9 +133,9 @@
 <pre>
 <font color="#00e5ff"><b>[SYSTEM_LOG]</b></font> <font color="#58a6ff">Latest telemetry stream initialized.</font>
 <!--START_SECTION:activity-->
-- 🚀 Pushed commits to <a href="https://github.com/miyxotkem/SE100_DatPhongKhachSan"><b>miyxotkem/SE100_DatPhongKhachSan</b></a>
-- 🛰️ Active development on <a href="https://github.com/phamhuy273/se347-smart-travel-planner"><b>phamhuy273/se347-smart-travel-planner</b></a>
-- ⚙️ Automated metrics pipeline operational on <b>miyxotkem/miyxotkem</b>
+1. 🎉 Merged PR [#18](https://github.com/phamhuy273/se347-smart-travel-planner/pull/18) in [phamhuy273/se347-smart-travel-planner](https://github.com/phamhuy273/se347-smart-travel-planner)
+2. 💪 Opened PR [#18](https://github.com/phamhuy273/se347-smart-travel-planner/pull/18) in [phamhuy273/se347-smart-travel-planner](https://github.com/phamhuy273/se347-smart-travel-planner)
+3. 🎉 Merged PR [#17](https://github.com/phamhuy273/se347-smart-travel-planner/pull/17) in [phamhuy273/se347-smart-travel-planner](https://github.com/phamhuy273/se347-smart-travel-planner)
 <!--END_SECTION:activity-->
 </pre>
       </td>
