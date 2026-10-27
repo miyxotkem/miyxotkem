@@ -112,22 +112,16 @@ jobs:
       - name: Collect metrics renders into dist/
         run: |
           mkdir -p dist
+          # Copy static fallback assets first
+          cp -r .github/assets/* dist/ 2>/dev/null || true
+          cp -r "$GITHUB_WORKSPACE/.github/assets/"* dist/ 2>/dev/null || true
+
+          # Copy generated renders (overwrites static fallbacks if generated)
           [ -f /metrics_renders/metrics-stats.svg ] && cp /metrics_renders/metrics-stats.svg dist/ || true
           [ -f /metrics_renders/metrics-languages.svg ] && cp /metrics_renders/metrics-languages.svg dist/ || true
           [ -f /metrics_renders/metrics-achievements.svg ] && cp /metrics_renders/metrics-achievements.svg dist/ || true
           [ -f /metrics_renders/metrics-isocalendar.svg ] && cp /metrics_renders/metrics-isocalendar.svg dist/ || true
-          
-          # Habits: copy live render if available, fallback to static asset
-          if [ -f /metrics_renders/metrics-habits.svg ]; then
-            cp /metrics_renders/metrics-habits.svg dist/
-          elif [ -f .github/assets/metrics-habits.svg ]; then
-            cp .github/assets/metrics-habits.svg dist/
-          fi
-
-          # Audio/Spotify status asset
-          if [ -f .github/assets/spotify-status.svg ]; then
-            cp .github/assets/spotify-status.svg dist/
-          fi
+          [ -f /metrics_renders/metrics-habits.svg ] && cp /metrics_renders/metrics-habits.svg dist/ || true
 
           echo "dist/ now contains:"
           ls -la dist/
@@ -138,6 +132,7 @@ jobs:
         with:
           target_branch: output
           build_dir: dist
+          keep_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
