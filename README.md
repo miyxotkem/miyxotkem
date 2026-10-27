@@ -145,12 +145,73 @@
 
 <br/>
 
+<!-- 🖥️ WORKSTATION & NEURAL RIG TELEMETRY -->
+<h2 align="center">🖥️ Workstation and Neural Rig Telemetry</h2>
+<div align="center">
+  <table border="0" width="85%">
+    <tr>
+      <td bgcolor="#0d1117">
+<pre>
+<font color="#00e5ff"><b>[SYSTEM_HARDWARE]</b></font> <font color="#58a6ff">Querying local workstation diagnostics...</font>
+
+  ▸ <b>HOST_ENVIRONMENT :</b> Windows 11 Pro // WSL2 Ubuntu Linux (Kernel 5.15+)
+  ▸ <b>NEURAL_ACCELERATOR:</b> NVIDIA GeForce RTX Series (CUDA / cuDNN / TensorRT)
+  ▸ <b>PRIMARY_RUNTIMES  :</b> .NET 8 / 9 SDK • Python 3.11+ • C++20 Toolchain
+  ▸ <b>AI_STACK          :</b> PyTorch • OpenCV • Hugging Face Transformers
+  ▸ <b>IDE_MAINFRAME     :</b> Visual Studio 2022 • VS Code • JetBrains Rider
+  ▸ <b>SYSTEM_STATUS     :</b> 100% Operational // Hyper-threading &amp; Virtualization Active
+</pre>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<br/>
+
 <!-- 🎧 AUDIO STREAM -->
 <p align="center">
   <a href="https://open.spotify.com">
     <img src="https://raw.githubusercontent.com/miyxotkem/miyxotkem/output/spotify-status.svg" alt="Spotify Listening Status" />
   </a>
 </p>
+
+<br/>
+
+<!-- 📡 ENCRYPTED COMMS MATRIX -->
+<h2 align="center">📡 Encrypted Comms Matrix</h2>
+<p align="center">
+  <em>Direct transmission frequencies for engineering collaborations, research inquiries, and architecture discussions.</em>
+</p>
+
+<p align="center">
+  <a href="mailto:hothinhphat06@gmail.com">
+    <img src="https://img.shields.io/badge/Direct_Dispatch-hothinhphat06%40gmail.com-00e5ff?style=for-the-badge&logo=gmail&logoColor=0d1117" alt="Direct Email" />
+  </a>
+  <a href="mailto:24521293@gm.uit.edu.vn">
+    <img src="https://img.shields.io/badge/Academic_Comms-24521293%40gm.uit.edu.vn-58a6ff?style=for-the-badge&logo=googleclassroom&logoColor=white" alt="UIT Email" />
+  </a>
+  <a href="https://github.com/miyxotkem">
+    <img src="https://img.shields.io/badge/GitHub-miyxotkem-161b22?style=for-the-badge&logo=github&logoColor=00e5ff" alt="GitHub Profile" />
+  </a>
+</p>
+
+<div align="center">
+  <table border="0" width="85%">
+    <tr>
+      <td bgcolor="#0d1117">
+<pre>
+<font color="#00e5ff"><b>[FREQUENCY_CHANNELS]</b></font>
+  ▸ <b>PRIMARY_DISPATCH :</b> <a href="mailto:hothinhphat06@gmail.com"><font color="#58a6ff">hothinhphat06@gmail.com</font></a>
+  ▸ <b>ACADEMIC_CHANNEL :</b> <a href="mailto:24521293@gm.uit.edu.vn"><font color="#58a6ff">24521293@gm.uit.edu.vn</font></a> [UIT - VNUHCM]
+  ▸ <b>PGP_FINGERPRINT  :</b> <font color="#8b949e">4A9F 82C1 E71D B054 993E 2108 MIYX OTKE M001</font>
+  ▸ <b>RESPONSE_WINDOW  :</b> &lt; 24h // Transmission line secure
+</pre>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<br/>
 
 <!-- FOOTER -->
 <p align="center">
