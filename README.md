@@ -1,6 +1,6 @@
 <!-- 🌟 ABSOLUTE HERO SECTION 🌟 -->
 <p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:0d1117,100:00e5ff&height=200&section=header&text=MIYXOTKEM&fontSize=80&fontColor=ffffff&animation=twinkle&desc=Software%20Architect%20|%20AI%20Researcher&descAlignY=75&descAlign=62" width="100%" alt="Hero Banner" />
+  <img src=".github/assets/hero-banner-title.jpg" width="100%" alt="MIYXOTKEM - Software Architect & AI Researcher" />
 </p>
 
 <p align="center">
@@ -125,9 +125,8 @@
   </a>
 </p>
 
-<br/>
-
 <!-- FOOTER -->
+<hr/>
 <p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:00e5ff,100:0d1117&height=100&section=footer" width="100%" />
+  <sub>🛰️ <b>MIYXOTKEM MAINFRAME</b> // AUTONOMOUS UAV PERCEPTION & NEURAL SYSTEMS</sub>
 </p>
