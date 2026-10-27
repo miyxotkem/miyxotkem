@@ -76,15 +76,6 @@
   </tr>
 </table>
 
-<p align="center">
-  <a href="https://github.com/miyxotkem/SE104_SmartEdu">
-    <img src="https://github-readme-stats.vercel.app/api/pin/?username=miyxotkem&repo=SE104_SmartEdu&theme=github_dark&bg_color=0d1117&border_color=00e5ff&title_color=00e5ff" alt="SE104_SmartEdu Pin" />
-  </a>
-  <a href="https://github.com/miyxotkem/SE100_DatPhongKhachSan">
-    <img src="https://github-readme-stats.vercel.app/api/pin/?username=miyxotkem&repo=SE100_DatPhongKhachSan&theme=github_dark&bg_color=0d1117&border_color=00e5ff&title_color=00e5ff" alt="SE100_DatPhongKhachSan Pin" />
-  </a>
-</p>
-
 <br/>
 
 <!-- 📈 DATA VISUALIZATION -->
