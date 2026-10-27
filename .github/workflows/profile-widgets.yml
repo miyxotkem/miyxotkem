@@ -32,36 +32,7 @@ jobs:
             dist/github-contribution-grid-snake.svg
             dist/github-contribution-grid-snake-dark.svg?palette=github-dark
 
-      # ── Stats card ──
-      - name: Generate metrics-stats.svg
-        uses: lowlighter/metrics@latest
-        continue-on-error: true
-        with:
-          token: ${{ secrets.METRICS_TOKEN || secrets.GITHUB_TOKEN }}
-          user: miyxotkem
-          template: classic
-          base: "header, activity, community, repositories, metadata"
-          config_timezone: Asia/Ho_Chi_Minh
-          output_action: none
-          filename: metrics-stats.svg
-
-      # ── Top languages card ──
-      - name: Generate metrics-languages.svg
-        uses: lowlighter/metrics@latest
-        continue-on-error: true
-        with:
-          token: ${{ secrets.METRICS_TOKEN || secrets.GITHUB_TOKEN }}
-          user: miyxotkem
-          template: classic
-          base: ""
-          plugin_languages: yes
-          plugin_languages_analysis_timeout: 15
-          plugin_languages_limit: 8
-          plugin_languages_details: percentage
-          output_action: none
-          filename: metrics-languages.svg
-
-      # ── Achievements ──
+      # ── Achievements Badge ──
       - name: Generate metrics-achievements.svg
         uses: lowlighter/metrics@latest
         continue-on-error: true
@@ -76,57 +47,15 @@ jobs:
           output_action: none
           filename: metrics-achievements.svg
 
-      # ── Isometric contribution calendar ──
-      - name: Generate metrics-isocalendar.svg
-        uses: lowlighter/metrics@latest
-        continue-on-error: true
-        with:
-          token: ${{ secrets.METRICS_TOKEN || secrets.GITHUB_TOKEN }}
-          user: miyxotkem
-          template: classic
-          base: ""
-          plugin_isocalendar: yes
-          plugin_isocalendar_duration: full-year
-          output_action: none
-          filename: metrics-isocalendar.svg
-
-      # ── Coding habits card ──
-      - name: Generate metrics-habits.svg
-        uses: lowlighter/metrics@latest
-        continue-on-error: true
-        with:
-          token: ${{ secrets.METRICS_TOKEN || secrets.GITHUB_TOKEN }}
-          user: miyxotkem
-          template: classic
-          base: ""
-          plugin_habits: yes
-          plugin_habits_from: 200
-          plugin_habits_days: 14
-          plugin_habits_facts: yes
-          plugin_habits_charts: yes
-          config_timezone: Asia/Ho_Chi_Minh
-          output_action: none
-          filename: metrics-habits.svg
-
-      # ── Collect all renders and assets into dist/ ──
+      # ── Collect renders into dist/ ──
       - name: Collect metrics renders into dist/
         run: |
           mkdir -p dist
-          # Copy static fallback assets first
-          cp -r .github/assets/* dist/ 2>/dev/null || true
-          cp -r "$GITHUB_WORKSPACE/.github/assets/"* dist/ 2>/dev/null || true
-
-          # Copy generated renders (overwrites static fallbacks if generated)
-          [ -f /metrics_renders/metrics-stats.svg ] && cp /metrics_renders/metrics-stats.svg dist/ || true
-          [ -f /metrics_renders/metrics-languages.svg ] && cp /metrics_renders/metrics-languages.svg dist/ || true
           [ -f /metrics_renders/metrics-achievements.svg ] && cp /metrics_renders/metrics-achievements.svg dist/ || true
-          [ -f /metrics_renders/metrics-isocalendar.svg ] && cp /metrics_renders/metrics-isocalendar.svg dist/ || true
-          [ -f /metrics_renders/metrics-habits.svg ] && cp /metrics_renders/metrics-habits.svg dist/ || true
-
           echo "dist/ now contains:"
           ls -la dist/
 
-      # ── Push everything (snake + metrics + assets) to output branch in one go ──
+      # ── Push to output branch ──
       - name: Push to output branch
         uses: crazy-max/ghaction-github-pages@v3.1.0
         with:
