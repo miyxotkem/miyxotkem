@@ -90,12 +90,12 @@
 <!-- Productivity and Language Distribution -->
 <p align="center">
   <img src="https://github-profile-summary-cards.vercel.app/api/cards/productive-time?username=miyxotkem&theme=github_dark&utcOffset=7" alt="Productive Time Card" width="49%" />
-  <img src="https://github-profile-summary-cards.vercel.app/api/cards/repos-per-lang?username=miyxotkem&theme=github_dark" alt="Repos per Language Card" width="49%" />
+  <img src="https://github-profile-summary-cards.vercel.app/api/cards/repos-per-language?username=miyxotkem&theme=github_dark" alt="Repos per Language Card" width="49%" />
 </p>
 
 <!-- 30-Day Contribution Graph -->
 <p align="center">
-  <img src="https://github-readme-activity-graph.vercel.app/graph?username=miyxotkem&bg_color=0d1117&color=00e5ff&line=58a6ff&point=ffffff&area=true&hide_border=true" width="100%" alt="miyxotkem's Activity Graph" />
+  <img src="https://activity-graph.vercel.app/graph?username=miyxotkem&bg_color=0d1117&color=00e5ff&line=58a6ff&point=ffffff&area=true&hide_border=true" width="100%" alt="miyxotkem's Activity Graph" />
 </p>
 
 <!-- Stats & Languages Metrics -->
@@ -130,8 +130,14 @@
   <table border="0" width="85%">
     <tr>
       <td bgcolor="#0d1117">
-<!-- RECENT_ACTIVITY:START -->
-<!-- RECENT_ACTIVITY:END -->
+<pre>
+<font color="#00e5ff"><b>[SYSTEM_LOG]</b></font> <font color="#58a6ff">Latest telemetry stream initialized.</font>
+<!--START_SECTION:activity-->
+- 🚀 Pushed commits to <a href="https://github.com/miyxotkem/SE100_DatPhongKhachSan"><b>miyxotkem/SE100_DatPhongKhachSan</b></a>
+- 🛰️ Active development on <a href="https://github.com/phamhuy273/se347-smart-travel-planner"><b>phamhuy273/se347-smart-travel-planner</b></a>
+- ⚙️ Automated metrics pipeline operational on <b>miyxotkem/miyxotkem</b>
+<!--END_SECTION:activity-->
+</pre>
       </td>
     </tr>
   </table>
@@ -142,7 +148,7 @@
 <!-- 🎧 AUDIO STREAM -->
 <p align="center">
   <a href="https://open.spotify.com">
-    <img src="https://novatorem-spotify-status.vercel.app/api/spotify" alt="Spotify Listening Status" />
+    <img src="https://raw.githubusercontent.com/miyxotkem/miyxotkem/output/spotify-status.svg" alt="Spotify Listening Status" />
   </a>
 </p>
 

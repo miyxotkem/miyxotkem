@@ -20,7 +20,10 @@ jobs:
       contents: write
 
     steps:
-      # ── Snake contribution animation (unchanged from your existing setup) ──
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Snake contribution animation ──
       - name: Generate github-contribution-grid-snake.svg
         uses: Platane/snk/svg-only@v3
         with:
@@ -29,11 +32,12 @@ jobs:
             dist/github-contribution-grid-snake.svg
             dist/github-contribution-grid-snake-dark.svg?palette=github-dark
 
-      # ── Stats card (replaces github-readme-stats.vercel.app "Stats") ──
+      # ── Stats card ──
       - name: Generate metrics-stats.svg
         uses: lowlighter/metrics@latest
+        continue-on-error: true
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.METRICS_TOKEN || secrets.GITHUB_TOKEN }}
           user: miyxotkem
           template: classic
           base: "header, activity, community, repositories, metadata"
@@ -41,11 +45,12 @@ jobs:
           output_action: none
           filename: metrics-stats.svg
 
-      # ── Top languages card (replaces github-readme-stats "Languages") ──
+      # ── Top languages card ──
       - name: Generate metrics-languages.svg
         uses: lowlighter/metrics@latest
+        continue-on-error: true
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.METRICS_TOKEN || secrets.GITHUB_TOKEN }}
           user: miyxotkem
           template: classic
           base: ""
@@ -56,11 +61,12 @@ jobs:
           output_action: none
           filename: metrics-languages.svg
 
-      # ── Achievements (replaces the broken github-profile-trophy) ──
+      # ── Achievements ──
       - name: Generate metrics-achievements.svg
         uses: lowlighter/metrics@latest
+        continue-on-error: true
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.METRICS_TOKEN || secrets.GITHUB_TOKEN }}
           user: miyxotkem
           template: classic
           base: ""
@@ -70,11 +76,12 @@ jobs:
           output_action: none
           filename: metrics-achievements.svg
 
-      # ── Isometric contribution calendar (replaces github-readme-3d-contrib) ──
+      # ── Isometric contribution calendar ──
       - name: Generate metrics-isocalendar.svg
         uses: lowlighter/metrics@latest
+        continue-on-error: true
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.METRICS_TOKEN || secrets.GITHUB_TOKEN }}
           user: miyxotkem
           template: classic
           base: ""
@@ -83,21 +90,49 @@ jobs:
           output_action: none
           filename: metrics-isocalendar.svg
 
-      # ── Collect the 4 metrics files from /metrics_renders into dist/ ──
-      # (this is the step that was MISSING before — output_action: none writes
-      #  files to /metrics_renders/{filename}, not to the workspace directly)
+      # ── Coding habits card ──
+      - name: Generate metrics-habits.svg
+        uses: lowlighter/metrics@latest
+        continue-on-error: true
+        with:
+          token: ${{ secrets.METRICS_TOKEN || secrets.GITHUB_TOKEN }}
+          user: miyxotkem
+          template: classic
+          base: ""
+          plugin_habits: yes
+          plugin_habits_from: 200
+          plugin_habits_days: 14
+          plugin_habits_facts: yes
+          plugin_habits_charts: yes
+          config_timezone: Asia/Ho_Chi_Minh
+          output_action: none
+          filename: metrics-habits.svg
+
+      # ── Collect all renders and assets into dist/ ──
       - name: Collect metrics renders into dist/
         run: |
           mkdir -p dist
-          ls -la /metrics_renders || true
-          cp /metrics_renders/metrics-stats.svg dist/
-          cp /metrics_renders/metrics-languages.svg dist/
-          cp /metrics_renders/metrics-achievements.svg dist/
-          cp /metrics_renders/metrics-isocalendar.svg dist/
+          [ -f /metrics_renders/metrics-stats.svg ] && cp /metrics_renders/metrics-stats.svg dist/ || true
+          [ -f /metrics_renders/metrics-languages.svg ] && cp /metrics_renders/metrics-languages.svg dist/ || true
+          [ -f /metrics_renders/metrics-achievements.svg ] && cp /metrics_renders/metrics-achievements.svg dist/ || true
+          [ -f /metrics_renders/metrics-isocalendar.svg ] && cp /metrics_renders/metrics-isocalendar.svg dist/ || true
+          
+          # Habits: copy live render if available, fallback to static asset
+          if [ -f /metrics_renders/metrics-habits.svg ]; then
+            cp /metrics_renders/metrics-habits.svg dist/
+          elif [ -f .github/assets/metrics-habits.svg ]; then
+            cp .github/assets/metrics-habits.svg dist/
+          fi
+
+          # Audio/Spotify status asset
+          if [ -f .github/assets/spotify-status.svg ]; then
+            cp .github/assets/spotify-status.svg dist/
+          fi
+
           echo "dist/ now contains:"
           ls -la dist/
 
-      # ── Push everything (snake + metrics) to the "output" branch in one go ──
+      # ── Push everything (snake + metrics + assets) to output branch in one go ──
       - name: Push to output branch
         uses: crazy-max/ghaction-github-pages@v3.1.0
         with:
@@ -105,3 +140,19 @@ jobs:
           build_dir: dist
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── Telemetry update for README.md ──
+  telemetry:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update Live System Telemetry
+        uses: jamesgeorge007/github-activity-readme@master
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          COMMIT_MSG: "chore: update live system logs [skip ci]"
+          MAX_LINES: 5
