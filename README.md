@@ -1,6 +1,6 @@
 <!-- 🌟 ABSOLUTE HERO SECTION 🌟 -->
 <p align="center">
-  <img src=".github/assets/hero-banner-title.jpg" width="100%" alt="MIYXOTKEM - Software Architect & AI Researcher" />
+  <img src=".github/assets/hero-pasta-ai.png" width="100%" alt="miyxotkem - Software Engineering at UIT, Computer Vision, AIOps and .NET - cream pasta, code, AI and drone illustration" />
 </p>
 
 <p align="center">
