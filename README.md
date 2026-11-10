@@ -9,6 +9,6 @@
 </div>
 
 <p align="center">
-<a href="https://github.com/miyxotkem">github</a> &nbsp;/&nbsp; <a href="https://www.facebook.com/miyxotkem.ne">facebook</a> &nbsp;/&nbsp; <a href="https://www.instagram.com/fettuccinecarbonaraghhh">instagram</a> &nbsp;/&nbsp; <a href="https://github.com/miyxotkem/miyxotkem/blob/main/resume.pdf">resume</a> &nbsp;/&nbsp; <a href="mailto:hothinhphat06@gmail.com">email</a>
+<a href="https://github.com/miyxotkem"><img src="./cards/link-github.svg" height="28" alt="github" /></a><a href="https://www.facebook.com/miyxotkem.ne"><img src="./cards/link-facebook.svg" height="28" alt="facebook" /></a><a href="https://www.instagram.com/fettuccinecarbonaraghhh"><img src="./cards/link-instagram.svg" height="28" alt="instagram" /></a><a href="https://github.com/miyxotkem/miyxotkem/blob/main/resume.pdf"><img src="./cards/link-resume.svg" height="28" alt="resume" /></a><a href="mailto:hothinhphat06@gmail.com"><img src="./cards/link-email.svg" height="28" alt="email" /></a>
 </p>
 <!-- cards:end -->

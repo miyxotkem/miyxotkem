@@ -387,6 +387,23 @@ def hours_card(data):
     return svg(W, h, "".join(b), ["serif", "serif-i", "sans", "mono"], label)
 
 
+# ---- footer links -------------------------------------------------------------
+# GitHub strips CSS from READMEs, so the links are drawn as small images in the
+# accent colour (transparent background: works on light and dark GitHub alike).
+def link_svg(text, last):
+    fs, cw = 14, 14 * 0.6           # Geist Mono: every glyph is 0.6em wide
+    w = len(text) * cw + 14 + (0 if last else 30)
+    b = [f'<text x="2" y="19" font-family="{MONO}" font-size="{fs}" fill="{ACCENT}">{escape(text)}</text>',
+         f'<path transform="translate({len(text)*cw + 5:.1f} 8)" d="M1 8L8 1M3 1h5v5" fill="none" '
+         f'stroke="{ACCENT}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>']
+    if not last:
+        b.append(f'<text x="{w - 14:.1f}" y="19" text-anchor="middle" font-family="{MONO}" font-size="{fs}" '
+                 f'fill="{GREY_BAR}">/</text>')
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{w:.1f}" height="28" viewBox="0 0 {w:.1f} 28" '
+            f'role="img" aria-label="{escape(text)}"><title>{escape(text)}</title>'
+            f'<style>{font_css(["mono"])}</style>{"".join(b)}</svg>')
+
+
 # ---- README block -------------------------------------------------------------
 def readme_block(data):
     def img(src, alt, width="100%"):
@@ -405,7 +422,8 @@ def readme_block(data):
         "</div>",
         "",
         '<p align="center">',
-        " &nbsp;/&nbsp; ".join(f'<a href="{u}">{t}</a>' for t, u in FOOTER_LINKS),
+        "".join(f'<a href="{u}"><img src="./cards/link-{t}.svg" height="28" alt="{t}" /></a>'
+                for t, u in FOOTER_LINKS),
         "</p>",
         "<!-- cards:end -->",
     ]
@@ -433,6 +451,8 @@ def main():
     write("title-code-light.svg", title("When I", "code", False))
     write("title-code-dark.svg", title("When I", "code", True))
     write("hours.svg", hours_card(data))
+    for i, (t, _) in enumerate(FOOTER_LINKS):
+        write(f"link-{t}.svg", link_svg(t, i == len(FOOTER_LINKS) - 1))
     readme_block(data)
 
 
