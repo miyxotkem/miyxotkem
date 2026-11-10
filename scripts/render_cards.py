@@ -1,339 +1,391 @@
 #!/usr/bin/env python3
 """
-Render the profile README's animated SVG cards into cards/.
+Render the profile README's animated SVG cards into cards/, and refresh the
+card block in README.md.
 
-Theme: "MAINFRAME" - near-black panels, cyan signal colour, monospace type,
-a radar that keeps sweeping for drones.
+Look: warm paper cards, ink text, one accent colour per tile, Instrument Serif
+headlines with italic accents, Geist body text, Geist Mono labels.
 
-Each card is a standalone SVG shown through <img>, so it may only use what
-GitHub allows there: inline CSS animation and SMIL. No scripts, no external
-fonts or images. Live numbers come from data/contributions.json
-(written by fetch_contributions.py).
+Every card is a standalone SVG shown through <img>, so it may only use what
+GitHub allows there: inline CSS animations, SMIL, and fonts embedded as data
+URIs (no scripts, no external requests). Fonts in fonts/ are SIL OFL.
+
+Live numbers come from data/contributions.json (fetch_contributions.py);
+the ASCII picture comes from data/portrait.txt (make_ascii.py).
 
     python scripts/render_cards.py
 """
+import base64
 import datetime
 import json
-import math
 import os
+import re
 from html import escape
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 DATA = os.path.join(ROOT, "data", "contributions.json")
+PORTRAIT = os.path.join(ROOT, "data", "portrait.txt")
 OUT = os.path.join(ROOT, "cards")
+FONTS = os.path.join(ROOT, "fonts")
+README = os.path.join(ROOT, "README.md")
 
-# ---- profile content (edit freely) ------------------------------------------
-NAME = "THINH PHAT HO"
-HANDLE = "miyxotkem"
-ROLE = "Software Engineering @ UIT (VNUHCM)"
-TERMINAL = [
-    ("$", "./execute_profile.sh"),
-    ("+", "ACCESS GRANTED. initializing developer telemetry..."),
-    (">", "MISSION   software architecture x artificial intelligence"),
-    (">", "RESEARCH  real-time UAV (drone) detection pipelines"),
-    (">", "STACK     .NET / WPF  ·  PyTorch  ·  OpenCV  ·  AIOps"),
-    (">", "RIG       Win11 + WSL2  ·  RTX / CUDA  ·  .NET 8"),
+# ---- your content (edit freely) ---------------------------------------------
+FIRST, LAST = "Thinh Phat", "Ho"
+EYEBROW = "SOFTWARE ENGINEERING @ UIT"
+BLURB = ["I build computer vision systems that spot drones,",
+         "and the .NET software that ships them."]
+LINK_TEXT, LINK_URL = "github.com/miyxotkem", "https://github.com/miyxotkem"
+TILES = [  # (file, label, colour key, big text, italic word, blurb)
+    ("research", "RESEARCH", "tech", "UAV", "detection", "Real-time deep learning pipelines that find drones in live video."),
+    ("build", "BUILD", "studio", "2", "systems", "UAV Detection Engine and the Cloud E-Learning Hub, both shipped."),
+    ("learn", "LEARN", "learn", "UIT", "VNUHCM", "Software Engineering student in Ho Chi Minh City, Vietnam."),
 ]
-PROJECTS = [
-    {
-        "file": "project-uav",
-        "code": "SYS-01",
-        "title": "UAV Detection Engine",
-        "kind": "Computer Vision · AIOps research",
-        "blurb": "Deep learning pipeline that spots drones in live video, tuned for low latency, with AIOps monitoring on the deployed models.",
-        "tags": ["PyTorch", "OpenCV", "Hugging Face"],
-    },
-    {
-        "file": "project-elearning",
-        "code": "SYS-02",
-        "title": "Cloud E-Learning Hub",
-        "kind": "Full-stack desktop architecture",
-        "blurb": "Education management system with real-time state sync, built in C# / WPF / XAML on a Firebase cloud backend.",
-        "tags": ["C#", "WPF", "Firebase"],
-    },
-]
+FOOTER_LINKS = [("github", "https://github.com/miyxotkem"),
+                ("resume", "https://github.com/miyxotkem/miyxotkem/blob/main/resume.pdf"),
+                ("email", "mailto:hothinhphat06@gmail.com")]
 
 # ---- tokens -----------------------------------------------------------------
-BG = "#0b0f14"
-PANEL = "#0f151c"
-LINE = "#1d2a36"
-CYAN = "#00e5ff"
-BLUE = "#58a6ff"
-TEXT = "#e6edf3"
-MUTED = "#7d8b99"
-GREEN = "#3fb950"
-HEAT = ["#141c24", "#0b3d4a", "#0a6e80", "#00a9c4", "#00e5ff"]
-MONO = "'JetBrains Mono','Fira Code',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace"
+PAPER = "#f3f3f1"
+EMPTY = "#e2e2de"
+INK = "#111111"
+INK_SOFT = "#3a3a3c"
+MUTED = "#6e6e73"
+RULE = "#dcdcd7"
+GREY_BAR = "#c8c8c3"
+COLORS = {"tech": "#2f55ff", "studio": "#ef3b2d", "learn": "#ffc81a"}
+TECH = COLORS["tech"]
+BLUES = [EMPTY, "#c9d3ff", "#93a7ff", "#5e7bff", "#2f55ff", "#1a37c9"]
+LANG_DOT = {"Python": TECH, "C#": COLORS["studio"], "TypeScript": TECH, "JavaScript": COLORS["learn"]}
 W = 880
+GAP = 12          # space under each card, baked in so the README stays gapless
+TILE_W = W / 3
 
-CSS = f"""
-text{{font-family:{MONO}}}
-@keyframes fade{{from{{opacity:0}}to{{opacity:1}}}}
-@keyframes rise{{from{{opacity:0;transform:translateY(10px)}}to{{opacity:1;transform:none}}}}
-@keyframes pop{{0%{{opacity:0;transform:scale(.2)}}70%{{opacity:1;transform:scale(1.2)}}100%{{opacity:1;transform:none}}}}
-@keyframes grow{{from{{transform:scaleY(0)}}to{{transform:scaleY(1)}}}}
-@keyframes blink{{0%,49%{{opacity:1}}50%,100%{{opacity:0}}}}
-@keyframes pulse{{0%,100%{{opacity:1}}50%{{opacity:.3}}}}
-@keyframes scan{{0%{{transform:translateY(-40px)}}100%{{transform:translateY(var(--h,300px))}}}}
-@keyframes ring{{0%{{opacity:.9;transform:scale(.3)}}100%{{opacity:0;transform:scale(2.6)}}}}
-.f{{opacity:0;animation:fade .8s ease-out both}}
-.r{{opacity:0;animation:rise .7s cubic-bezier(.2,.7,.2,1) both;transform-box:fill-box}}
-.p{{opacity:0;transform-box:fill-box;transform-origin:center;animation:pop .35s ease-out both}}
-.g{{transform-box:fill-box;transform-origin:bottom;transform:scaleY(0);animation:grow .8s cubic-bezier(.2,.7,.2,1) both}}
-.cur{{animation:blink 1s step-end infinite}}
-.live{{animation:pulse 1.6s ease-in-out infinite}}
-.ring{{transform-box:fill-box;transform-origin:center;animation:ring 2s ease-out infinite}}
-.scan{{animation:scan 5s linear infinite}}
+SERIF = "'Instrument Serif', Georgia, serif"
+SANS = "Geist, system-ui, -apple-system, sans-serif"
+MONO = "'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace"
+FONT_FILES = {
+    "serif": ("Instrument Serif", "normal", 400, "instrument-serif-latin-400-normal.woff"),
+    "serif-i": ("Instrument Serif", "italic", 400, "instrument-serif-latin-400-italic.woff"),
+    "sans": ("Geist", "normal", 400, "geist-sans-latin-400-normal.woff"),
+    "sans-b": ("Geist", "normal", 600, "geist-sans-latin-600-normal.woff"),
+    "mono": ("Geist Mono", "normal", 400, "geist-mono-latin-400-normal.woff"),
+}
+
+CSS = """
+@keyframes up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes in{from{opacity:0}to{opacity:1}}
+@keyframes bar{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@keyframes dot{0%{opacity:0;transform:scale(.4)}60%{opacity:1;transform:scale(1.12)}100%{opacity:1;transform:none}}
+@keyframes beat{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes drop{0%{opacity:0;transform:translateY(70px) rotate(-6deg) scale(.8)}60%{opacity:1;transform:translateY(-6px) rotate(1.5deg)}100%{opacity:1;transform:none}}
+@keyframes type{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+@keyframes shine{0%{transform:translateX(-200px) skewX(-18deg)}25%,100%{transform:translateX(360px) skewX(-18deg)}}
+.u{opacity:0;animation:up .8s cubic-bezier(.2,.7,.2,1) both;transform-box:fill-box}
+.i{opacity:0;animation:in 1s ease-out both}
+.b{transform-box:fill-box;transform-origin:bottom;transform:scaleY(0);animation:bar .8s cubic-bezier(.2,.7,.2,1) both}
+.d{opacity:0;transform-box:fill-box;transform-origin:center;animation:dot .4s ease-out both}
+.beat{animation:beat 1.6s ease-in-out infinite}
+.drop{opacity:0;transform-box:fill-box;transform-origin:50% 70%;animation:drop 1s cubic-bezier(.2,.8,.2,1) both}
+.t{animation:type 1.6s steps(60) both}
+.shine{animation:shine 5s ease-in-out infinite}
+@media (prefers-reduced-motion: reduce){.u,.i,.b,.d,.drop,.t{animation:none!important;opacity:1!important;transform:none!important;clip-path:none!important}.beat,.shine{animation:none}}
 """
 
-
-def delay(s):
-    return f' style="animation-delay:{s:.2f}s"'
+_font_cache = {}
 
 
-def svg(w, h, body, label):
-    return (
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}" '
-        f'role="img" aria-label="{escape(label)}"><title>{escape(label)}</title>'
-        f"<style>{CSS}</style>"
-        f'<defs><pattern id="grid" width="22" height="22" patternUnits="userSpaceOnUse">'
-        f'<path d="M22 0H0V22" fill="none" stroke="{LINE}" stroke-width=".6" opacity=".55"/></pattern>'
-        f'<linearGradient id="scanG" x1="0" y1="0" x2="0" y2="1">'
-        f'<stop offset="0" stop-color="{CYAN}" stop-opacity="0"/>'
-        f'<stop offset="1" stop-color="{CYAN}" stop-opacity=".09"/></linearGradient></defs>'
-        f"{body}</svg>"
-    )
+def font_css(keys):
+    out = []
+    for k in keys:
+        fam, style, weight, fn = FONT_FILES[k]
+        if fn not in _font_cache:
+            with open(os.path.join(FONTS, fn), "rb") as f:
+                _font_cache[fn] = base64.b64encode(f.read()).decode()
+        out.append(f"@font-face{{font-family:'{fam}';font-style:{style};font-weight:{weight};"
+                   f"src:url(data:font/woff;base64,{_font_cache[fn]}) format('woff')}}")
+    return "".join(out)
 
 
-def frame(w, h, title, pad=6):
-    """Rounded panel with a header strip; returns (svg, content top y)."""
-    return (
-        f'<rect x="{pad}" y="{pad}" width="{w - 2*pad}" height="{h - 2*pad}" rx="10" fill="{BG}" stroke="{LINE}"/>'
-        f'<rect x="{pad}" y="{pad}" width="{w - 2*pad}" height="{h - 2*pad}" rx="10" fill="url(#grid)"/>'
-        f'<path d="M{pad+10} {pad}H{pad+70}" stroke="{CYAN}" stroke-width="2"/>'
-        f'<text x="{pad+18}" y="{pad+26}" font-size="11" fill="{CYAN}" letter-spacing="1.5">{escape(title)}</text>'
-    ), pad + 26
+def svg(w, h, body, fonts, label):
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{w:.3f}" height="{h}" viewBox="0 0 {w:.3f} {h}" '
+            f'role="img" aria-label="{escape(label)}"><title>{escape(label)}</title>'
+            f"<style>{font_css(fonts)}{CSS}</style>{body}</svg>")
 
 
 def write(name, content):
     os.makedirs(OUT, exist_ok=True)
     with open(os.path.join(OUT, name), "w") as f:
         f.write(content)
-    print("wrote cards/" + name)
+    print(f"wrote cards/{name} ({len(content)//1024} KB)")
+
+
+def at(s):
+    return f' style="animation-delay:{s:.2f}s"'
 
 
 def wrap(text, n):
     lines, cur = [], ""
-    for word in text.split():
-        if cur and len(cur) + 1 + len(word) > n:
+    for w in text.split():
+        if cur and len(cur) + 1 + len(w) > n:
             lines.append(cur)
-            cur = word
+            cur = w
         else:
-            cur = f"{cur} {word}".strip()
+            cur = f"{cur} {w}".strip()
     return lines + ([cur] if cur else [])
 
 
+def card(w, h, fill=PAPER):
+    return f'<rect width="{w:.3f}" height="{h - GAP}" rx="14" fill="{fill}"/>'
+
+
+def eyebrow(x, y, text, color=TECH, delay=0):
+    return (f'<g class="u"{at(delay)}><rect x="{x}" y="{y-9}" width="8" height="8" rx="1.5" fill="{color}"/>'
+            f'<text x="{x+18}" y="{y}" font-family="{MONO}" font-size="12" letter-spacing="1.8" fill="{INK_SOFT}">'
+            f"{escape(text)}</text></g>")
+
+
 # ---- hero -------------------------------------------------------------------
-def hero(data):
-    h = 330
-    b = [f'<rect x="6" y="6" width="{W-12}" height="{h-12}" rx="12" fill="{BG}" stroke="{LINE}"/>',
-         f'<rect x="6" y="6" width="{W-12}" height="{h-12}" rx="12" fill="url(#grid)"/>']
-    # window chrome
-    b.append(f'<path d="M6 40H{W-6}" stroke="{LINE}"/>')
-    for i, c in enumerate(["#ff5f56", "#ffbd2e", "#27c93f"]):
-        b.append(f'<circle cx="{28 + i*18}" cy="23" r="5.5" fill="{c}" opacity=".85"/>')
-    b.append(f'<text x="{W/2}" y="27" font-size="11" fill="{MUTED}" text-anchor="middle">'
-             f'root@{HANDLE}-mainframe: ~</text>')
-    b.append(f'<circle cx="{W-34}" cy="23" r="4" fill="{GREEN}" class="live"/>'
-             f'<text x="{W-44}" y="27" font-size="10" fill="{GREEN}" text-anchor="end">ONLINE</text>')
+def hero():
+    h = 432
+    b = [card(W, h)]
+    b.append(eyebrow(48, 64, EYEBROW))
+    b.append(f'<text class="u"{at(.15)} x="44" y="190" font-family="{SERIF}" font-size="104" '
+             f'letter-spacing="-2" fill="{INK}">{escape(FIRST)}</text>')
+    b.append(f'<text class="u"{at(.3)} x="52" y="292" font-family="{SERIF}" font-style="italic" font-size="116" '
+             f'letter-spacing="-2" fill="{INK}">{escape(LAST)}</text>')
+    for i, ln in enumerate(BLURB):
+        b.append(f'<text class="u"{at(.5 + i*.08)} x="50" y="{336 + i*27}" font-family="{SANS}" font-size="18" '
+                 f'fill="{INK_SOFT}">{escape(ln)}</text>')
+    b.append(f'<g class="u"{at(.75)}><text x="50" y="{394}" font-family="{MONO}" font-size="13.5" fill="{INK}">'
+             f'{escape(LINK_TEXT)}</text><text x="{50 + len(LINK_TEXT)*8.2 + 16}" y="394" font-family="{SANS}" '
+             f'font-size="15" fill="{TECH}">↗</text></g>')
 
-    # name block
-    b.append(f'<text x="34" y="92" font-size="38" font-weight="700" fill="{TEXT}" letter-spacing="2" class="r">'
-             f'{escape(NAME)}</text>')
-    b.append(f'<text x="36" y="118" font-size="13" fill="{CYAN}" class="r"{delay(.15)}>'
-             f'@{HANDLE} <tspan fill="{MUTED}">//</tspan> <tspan fill="{BLUE}">{escape(ROLE)}</tspan> 🇻🇳</text>')
-
-    # typed terminal: each line revealed by an animated clip rect
-    t0, y = 0.6, 154
-    for i, (sym, line) in enumerate(TERMINAL):
-        col = {"$": CYAN, "+": GREEN, ">": BLUE}[sym]
-        dur = max(0.35, len(line) * 0.012)
-        cid = f"c{i}"
-        b.append(f'<clipPath id="{cid}"><rect x="34" y="{y-13}" width="0" height="18">'
-                 f'<animate attributeName="width" from="0" to="560" begin="{t0:.2f}s" dur="{dur:.2f}s" '
-                 f'fill="freeze" calcMode="linear"/></rect></clipPath>')
-        label, _, rest = line.partition("  ")
-        body = (f'<tspan fill="{TEXT}" font-weight="700">{escape(label)}</tspan>'
-                f'<tspan fill="{MUTED}">  {escape(rest)}</tspan>') if sym == ">" else \
-               f'<tspan fill="{TEXT}">{escape(line)}</tspan>'
-        b.append(f'<text x="36" y="{y}" font-size="12.5" clip-path="url(#{cid})" xml:space="preserve">'
-                 f'<tspan fill="{col}">{sym}</tspan> {body}</text>')
-        t0 += dur + 0.08
-        y += 22
-    # blinking cursor after the last line
-    b.append(f'<g class="f"{delay(t0)}><rect x="36" y="{y-12}" width="8" height="14" fill="{CYAN}" class="cur"/></g>')
-
-    # radar on the right
-    cx, cy, R = 730, 190, 96
-    b.append(f'<g class="f"{delay(.3)}>')
-    for rr in (R, R*.66, R*.33):
-        b.append(f'<circle cx="{cx}" cy="{cy}" r="{rr:.1f}" fill="none" stroke="{CYAN}" stroke-opacity=".25"/>')
-    b.append(f'<path d="M{cx-R} {cy}H{cx+R}M{cx} {cy-R}V{cy+R}" stroke="{CYAN}" stroke-opacity=".15"/>')
-    # sweep wedge
-    a = math.radians(40)
-    x2, y2 = cx + R*math.cos(-a), cy + R*math.sin(-a)
-    b.append(f'<defs><linearGradient id="sw" x1="0" y1="0" x2="1" y2="0">'
-             f'<stop offset="0" stop-color="{CYAN}" stop-opacity="0"/>'
-             f'<stop offset="1" stop-color="{CYAN}" stop-opacity=".45"/></linearGradient></defs>')
-    b.append(f'<g><path d="M{cx} {cy}L{cx+R} {cy}A{R} {R} 0 0 0 {x2:.1f} {y2:.1f}Z" fill="url(#sw)"/>'
-             f'<path d="M{cx} {cy}L{cx+R} {cy}" stroke="{CYAN}" stroke-width="1.5"/>'
-             f'<animateTransform attributeName="transform" type="rotate" from="0 {cx} {cy}" to="360 {cx} {cy}" '
-             f'dur="4s" repeatCount="indefinite"/></g>')
-    # targets
-    for (tx, ty, lbl, d0) in [(cx+48, cy-38, "UAV-07", 0), (cx-56, cy+30, "UAV-12", 1)]:
-        b.append(f'<circle cx="{tx}" cy="{ty}" r="7" fill="none" stroke="{CYAN}" class="ring" style="animation-delay:{d0}s"/>'
-                 f'<circle cx="{tx}" cy="{ty}" r="3" fill="{CYAN}"/>'
-                 f'<path d="M{tx-10} {ty-10}h5M{tx-10} {ty-10}v5M{tx+10} {ty+10}h-5M{tx+10} {ty+10}v-5" stroke="{CYAN}"/>'
-                 f'<text x="{tx+13}" y="{ty-8}" font-size="9" fill="{CYAN}">{lbl}</text>')
-    b.append(f'<circle cx="{cx}" cy="{cy}" r="3" fill="{CYAN}"/></g>')
-    b.append(f'<text x="{cx}" y="{cy+R+22}" font-size="10" fill="{MUTED}" text-anchor="middle" letter-spacing="1.5">'
-             f'TARGET LOCK · UAV DETECTION ACTIVE</text>')
-
-    # footer line with live numbers
-    s = data["stats"]
-    b.append(f'<path d="M6 {h-40}H{W-6}" stroke="{LINE}"/>')
-    b.append(f'<text x="34" y="{h-19}" font-size="11" fill="{MUTED}" class="f"{delay(t0+.2)}>'
-             f'<tspan fill="{CYAN}">{s["total"]:,}</tspan> contributions this year  ·  '
-             f'<tspan fill="{CYAN}">{s["current_streak"]}d</tspan> current streak  ·  '
-             f'synced {escape(data["updated"])}</text>')
-    # scanline
-    b.append(f'<rect x="8" y="0" width="{W-16}" height="40" fill="url(#scanG)" class="scan" style="--h:{h}px"/>')
-    label = f"{NAME} ({HANDLE}). {ROLE}. Software architecture meets AI: real-time UAV detection, .NET, computer vision, AIOps."
-    return svg(W, h, "".join(b), label)
+    # ASCII picture, typed in line by line on the right
+    if os.path.exists(PORTRAIT):
+        rows = open(PORTRAIT).read().rstrip("\n").split("\n")
+        cols = max(len(r) for r in rows)
+        box_x, box_w, box_top, box_h = 470, 386, 36, 360
+        fs = min(box_w / (cols * 0.6), box_h / (len(rows) * 1.12))
+        lh = fs * 1.12
+        y0 = box_top + (box_h - lh * len(rows)) / 2 + fs
+        x0 = box_x + (box_w - cols * fs * 0.6) / 2
+        b.append(f'<g font-family="{MONO}" font-size="{fs:.2f}" fill="{INK}">')
+        cw = fs * 0.6
+        for i, r in enumerate(rows):
+            # Position each run of non-space characters exactly, so spacing never collapses.
+            for m in re.finditer(r"\S+(?: \S+)*", r):
+                run = m.group(0)
+                b.append(f'<text class="t"{at(.4 + i*.035)} x="{x0 + m.start()*cw:.1f}" y="{y0 + i*lh:.1f}" '
+                         f'textLength="{len(run)*cw:.1f}" lengthAdjust="spacingAndGlyphs" '
+                         f'xml:space="preserve">{escape(run)}</text>')
+        b.append("</g>")
+    return svg(W, h, "".join(b), ["serif", "serif-i", "sans", "mono"],
+               f"{FIRST} {LAST}. {EYEBROW.title()}. {' '.join(BLURB)}")
 
 
-# ---- contribution heatmap ---------------------------------------------------
+# ---- heatmap ----------------------------------------------------------------
+def level_of(count, cuts):
+    if count == 0:
+        return 0
+    for i, c in enumerate(cuts):
+        if count <= c:
+            return i + 1
+    return 5
+
+
 def heatmap(data):
     days = data["days"]
-    h = 210
-    b, top = frame(W, h, "// CONTRIBUTION_MATRIX — LAST 12 MONTHS")
-    b = [b]
-    b.append(f'<text x="{W-24}" y="32" font-size="11" fill="{MUTED}" text-anchor="end">'
-             f'<tspan fill="{CYAN}" font-weight="700">{data["stats"]["total"]:,}</tspan> contributions</text>')
+    h = 244
+    b = [card(W, h)]
+    b.append(f'<text class="u" x="48" y="72" font-family="{SERIF}" font-size="40" fill="{INK}">Every day, '
+             f'<tspan font-style="italic" fill="{TECH}">in blue</tspan></text>')
+    b.append(f'<text class="u"{at(.1)} x="{W-48}" y="68" text-anchor="end" font-family="{MONO}" font-size="12" '
+             f'letter-spacing="1.8" fill="{INK_SOFT}">REFRESHED DAILY</text>')
 
-    cell, gap = 12, 3
-    x0, y0 = 56, top + 32
+    nz = sorted(d["count"] for d in days if d["count"])
+    cuts = [nz[int(len(nz) * q)] for q in (.2, .45, .7, .9)] if nz else [1, 2, 3, 4]
+
     first = datetime.date.fromisoformat(days[0]["date"])
-    offset = (first.weekday() + 1) % 7  # Sunday-first rows, like GitHub
-    last_month = None
+    off = (first.weekday() + 1) % 7
+    ncols = (len(days) + off + 6) // 7
+    x0, y0 = 48, 96
+    step = (W - 96) / ncols
+    cell = step * 0.82
+    seen = set()
     for i, d in enumerate(days):
-        idx = i + offset
-        col, row = idx // 7, idx % 7
-        x, y = x0 + col*(cell+gap), y0 + row*(cell+gap)
+        col, row = divmod(i + off, 7)
+        x, y = x0 + col*step, y0 + row*step
+        lv = level_of(d["count"], cuts)
+        b.append(f'<rect class="d"{at(.25 + col*.018 + row*.012)} x="{x:.1f}" y="{y:.1f}" width="{cell:.1f}" '
+                 f'height="{cell:.1f}" rx="3" fill="{BLUES[lv]}"><title>{d["count"]} on {d["date"]}</title></rect>')
         dt = datetime.date.fromisoformat(d["date"])
-        if row == 0 or i == 0:
-            if dt.month != last_month and col < 52:
-                b.append(f'<text x="{x}" y="{y0-8}" font-size="9.5" fill="{MUTED}">{dt.strftime("%b")}</text>')
-                last_month = dt.month
-        lv = d["level"]
-        anim = f' class="p"{delay(0.2 + col*0.025 + row*0.01)}' if lv else ""
-        b.append(f'<rect x="{x}" y="{y}" width="{cell}" height="{cell}" rx="2.5" fill="{HEAT[lv]}"{anim}>'
-                 f'<title>{d["count"]} on {d["date"]}</title></rect>')
-    for row, lbl in ((1, "Mon"), (3, "Wed"), (5, "Fri")):
-        b.append(f'<text x="{x0-8}" y="{y0 + row*(cell+gap) + 10}" font-size="9.5" fill="{MUTED}" text-anchor="end">{lbl}</text>')
-    # legend
-    lx, ly = W - 24 - 5*(cell+gap) - 34, h - 26
-    b.append(f'<text x="{lx-8}" y="{ly+10}" font-size="9.5" fill="{MUTED}" text-anchor="end">less</text>')
-    for i, c in enumerate(HEAT):
-        b.append(f'<rect x="{lx + i*(cell+gap)}" y="{ly}" width="{cell}" height="{cell}" rx="2.5" fill="{c}"/>')
-    b.append(f'<text x="{lx + 5*(cell+gap) + 4}" y="{ly+10}" font-size="9.5" fill="{MUTED}">more</text>')
-    b.append(f'<text x="24" y="{ly+10}" font-size="9.5" fill="{MUTED}">synced {escape(data["updated"])}</text>')
-    return svg(W, h, "".join(b), f"{HANDLE}'s contribution graph for the last 12 months, refreshed daily")
+        if dt.day <= 7 and row == 0 and dt.month not in seen and 1 < col and x < W - 48 - 6*14 - 110:
+            seen.add(dt.month)
+            b.append(f'<text class="i"{at(1)} x="{x:.1f}" y="{y0 + 7*step + 18:.1f}" font-family="{MONO}" '
+                     f'font-size="11" fill="{MUTED}">{dt.strftime("%b")}</text>')
+    ly = y0 + 7*step + 18
+    lx = W - 48 - 6*14 - 34
+    b.append(f'<g class="i"{at(1.1)}><text x="{lx-8}" y="{ly:.1f}" text-anchor="end" font-family="{MONO}" '
+             f'font-size="11" fill="{MUTED}">less</text>')
+    for i, c in enumerate(BLUES):
+        b.append(f'<rect x="{lx + i*14}" y="{ly-9:.1f}" width="10" height="10" rx="2" fill="{c}"/>')
+    b.append(f'<text x="{lx + 6*14 + 2}" y="{ly:.1f}" font-family="{MONO}" font-size="11" fill="{MUTED}">more</text></g>')
+    return svg(W, h, "".join(b), ["serif", "serif-i", "mono"],
+               "Contribution graph for the last 12 months, in blue, refreshed daily")
 
 
-# ---- stats + monthly bars ---------------------------------------------------
-def stats_card(data):
+# ---- activity ---------------------------------------------------------------
+def activity(data):
     s = data["stats"]
-    h = 240
-    b, top = frame(W, h, "// TELEMETRY")
-    b = [b]
-    best = s["best_day"]
-    best_lbl = datetime.date.fromisoformat(best["date"]).strftime("%b %d") if best["date"] else "-"
-    kpis = [
-        (f'{s["total"]:,}', "CONTRIBUTIONS", "last 12 months"),
-        (f'{s["current_streak"]}', "CURRENT STREAK", "days in a row"),
-        (f'{s["longest_streak"]}', "LONGEST STREAK", "days"),
-        (f'{best["count"]}', "BUSIEST DAY", best_lbl),
-    ]
-    for i, (num, lbl, sub) in enumerate(kpis):
-        x = 24 + (i % 2) * 190
-        y = top + 42 + (i // 2) * 88
-        b.append(f'<g class="r"{delay(.1 + i*.12)}>'
-                 f'<path d="M{x} {y-28}v62" stroke="{CYAN if i == 1 else LINE}" stroke-width="2"/>'
-                 f'<text x="{x+14}" y="{y}" font-size="30" font-weight="700" fill="{TEXT}">{num}</text>'
-                 f'<text x="{x+14}" y="{y+20}" font-size="10" fill="{CYAN}" letter-spacing="1.2">{lbl}</text>'
-                 f'<text x="{x+14}" y="{y+34}" font-size="9.5" fill="{MUTED}">{escape(sub)}</text></g>')
-    if s["current_streak"]:
-        b.append(f'<circle cx="{24+190+14+len(kpis[1][0])*19+10}" cy="{top+42-10}" r="4" fill="{GREEN}" class="live"/>')
+    h = 352
+    b = [card(W, h)]
+    b.append(f'<text class="u" x="44" y="62" font-family="{MONO}" font-size="12" letter-spacing="1.8" '
+             f'fill="{INK_SOFT}">THE LAST 12 MONTHS ON GITHUB</text>')
+    b.append(f'<text class="u"{at(.1)} x="40" y="122" font-family="{SERIF}" font-size="66" letter-spacing="-1" '
+             f'fill="{INK}">{s["total"]:,} <tspan font-style="italic">contributions</tspan></text>')
 
-    # monthly bars
     months = s["monthly"]
-    bx, bw, base = 420, 432, h - 44
-    peak = max([m["count"] for m in months] + [1])
+    this_month = datetime.date.today().strftime("%Y-%m")
+    full = [m["count"] for m in months if m["month"] != this_month] or [1]
+    peak = max(full + [1])
+    bx, bw, base, top = 44, 520, h - GAP - 44, 160
     slot = bw / max(len(months), 1)
-    b.append(f'<text x="{bx}" y="{top+14}" font-size="10" fill="{MUTED}" letter-spacing="1.2">BY MONTH</text>')
-    b.append(f'<path d="M{bx} {base}H{bx+bw}" stroke="{LINE}"/>')
-    maxh = base - (top + 40)
     for i, m in enumerate(months):
-        bh = max(2, m["count"] / peak * maxh)
-        x = bx + i*slot + slot*0.18
-        hot = m["count"] == peak
-        b.append(f'<rect x="{x:.1f}" y="{base-bh:.1f}" width="{slot*0.64:.1f}" height="{bh:.1f}" rx="2" '
-                 f'fill="{CYAN if hot else HEAT[2]}" class="g"{delay(.3 + i*.06)}>'
-                 f'<title>{m["count"]} in {m["month"]}</title></rect>')
+        partial = m["month"] == this_month
+        bh = max(4, min(1, m["count"] / peak) * (base - top))
+        x = bx + i*slot + slot*0.1
+        fill = GREY_BAR if partial else TECH if m["count"] == peak else INK
+        b.append(f'<rect class="b"{at(.4 + i*.06)} x="{x:.1f}" y="{base-bh:.1f}" width="{slot*0.8:.1f}" '
+                 f'height="{bh:.1f}" rx="4" fill="{fill}"><title>{m["count"]} in {m["month"]}</title></rect>')
         mon = datetime.date.fromisoformat(m["month"] + "-01").strftime("%b")
-        b.append(f'<text x="{x + slot*0.32:.1f}" y="{base+15}" font-size="9" fill="{MUTED}" text-anchor="middle">{mon[0]}</text>')
-        if hot:
-            b.append(f'<text x="{x + slot*0.32:.1f}" y="{base-bh-6:.1f}" font-size="10" fill="{CYAN}" '
-                     f'text-anchor="middle" class="f"{delay(1.2)}>{m["count"]}</text>')
-    label = (f'{s["total"]} contributions in the last 12 months; current streak {s["current_streak"]} days; '
-             f'longest {s["longest_streak"]} days; busiest day {best["count"]} on {best_lbl}')
-    return svg(W, h, "".join(b), label)
+        b.append(f'<text class="i"{at(.8)} x="{x + slot*0.4:.1f}" y="{base+22}" text-anchor="middle" '
+                 f'font-family="{MONO}" font-size="11" fill="{MUTED}">{mon}</text>')
+        if fill == TECH:
+            b.append(f'<text class="i"{at(1.3)} x="{x + slot*0.4:.1f}" y="{base-bh-9:.1f}" text-anchor="middle" '
+                     f'font-family="{MONO}" font-size="11.5" fill="{TECH}">{m["count"]:,}</text>')
+
+    # right column: three numbers with rules between them
+    rx = 640
+    cur, lng = s["current_streak"], s["longest_streak"]
+    streak_sub = "current streak, and the longest" if cur and cur >= lng else f"current streak · longest {lng}"
+    best = s["best_day"]
+    rows = [
+        (f'{cur} <tspan font-style="italic">{"day" if cur == 1 else "days"}</tspan>', streak_sub),
+        (f'{s["active_days"]} <tspan fill="{MUTED}">/ {len(data["days"])}</tspan>', "days with a commit"),
+        (f'{best["count"]}', "on the busiest day"),
+    ]
+    for i, (big, sub) in enumerate(rows):
+        y = 112 + i*92
+        b.append(f'<g class="u"{at(.5 + i*.15)}><text x="{rx}" y="{y}" font-family="{SERIF}" font-size="46" '
+                 f'letter-spacing="-.5" fill="{INK}">{big}</text>'
+                 f'<text x="{rx+1}" y="{y+28}" font-family="{SANS}" font-size="14.5" fill="{INK_SOFT}">'
+                 f'{escape(sub)}</text></g>')
+        if i < 2:
+            b.append(f'<rect class="i"{at(.7 + i*.15)} x="{rx}" y="{y+52}" width="196" height="1" fill="{RULE}"/>')
+    label = (f'{s["total"]:,} contributions in the last 12 months. {cur} day current streak, longest {lng}. '
+             f'{s["active_days"]} of {len(data["days"])} days with a commit. {best["count"]} on the busiest day.')
+    return svg(W, h, "".join(b), ["serif", "serif-i", "sans", "mono"], label)
 
 
-# ---- project tiles ----------------------------------------------------------
-def project(p, i):
-    w, h = 440, 230
-    b, top = frame(w, h, f"// {p['code']}")
-    b = [b]
-    b.append(f'<circle cx="{w-30}" cy="28" r="4" fill="{GREEN}" class="live"/>'
-             f'<text x="{w-40}" y="32" font-size="9.5" fill="{GREEN}" text-anchor="end">DEPLOYED</text>')
-    b.append(f'<text x="24" y="{top+34}" font-size="20" font-weight="700" fill="{TEXT}" class="r"{delay(.1+i*.15)}>'
-             f'{escape(p["title"])}</text>')
-    b.append(f'<text x="24" y="{top+54}" font-size="11" fill="{CYAN}" class="r"{delay(.2+i*.15)}>{escape(p["kind"])}</text>')
-    for j, ln in enumerate(wrap(p["blurb"], 58)):
-        b.append(f'<text x="24" y="{top+82+j*17}" font-size="11" fill="{MUTED}" class="f"{delay(.35+i*.15+j*.08)}>'
+# ---- tiles ------------------------------------------------------------------
+def tile(i, label, key, big, word, blurb):
+    h = 222
+    color = COLORS[key]
+    ink = "#ffffff" if key in ("tech", "studio") else INK
+    w = TILE_W - 8
+    b = [f'<g transform="translate({4 if i else 0} 0)">',
+         f'<defs><clipPath id="c{i}"><rect width="{w:.3f}" height="{h-GAP}" rx="14"/></clipPath></defs>',
+         f'<g class="drop"{at(.2 + i*.18)}>',
+         f'<rect width="{w:.3f}" height="{h-GAP}" rx="14" fill="{color}"/>',
+         f'<g clip-path="url(#c{i})"><rect class="shine" style="animation-delay:{2 + i*1.6}s" x="0" y="-20" '
+         f'width="60" height="{h+40}" fill="#ffffff" opacity=".16"/></g>',
+         f'<text x="24" y="40" font-family="{MONO}" font-size="12" letter-spacing="1.8" fill="{ink}" opacity=".85">'
+         f'{escape(label)}</text>',
+         f'<text x="22" y="112" font-family="{SERIF}" font-size="62" letter-spacing="-1" fill="{ink}">{escape(big)} '
+         f'<tspan font-style="italic" font-size="34">{escape(word)}</tspan></text>']
+    for j, ln in enumerate(wrap(blurb, 32)):
+        b.append(f'<text x="24" y="{150 + j*20}" font-family="{SANS}" font-size="14" fill="{ink}" opacity=".88">'
                  f'{escape(ln)}</text>')
-    x = 24
-    for k, t in enumerate(p["tags"]):
-        tw = len(t) * 7 + 18
-        b.append(f'<g class="r"{delay(.6+i*.15+k*.1)}><rect x="{x}" y="{h-46}" width="{tw}" height="20" rx="10" '
-                 f'fill="none" stroke="{CYAN}" stroke-opacity=".5"/>'
-                 f'<text x="{x+tw/2}" y="{h-32}" font-size="10" fill="{CYAN}" text-anchor="middle">{escape(t)}</text></g>')
-        x += tw + 8
-    b.append(f'<rect x="8" y="0" width="{w-16}" height="40" fill="url(#scanG)" class="scan" '
-             f'style="--h:{h}px;animation-delay:{i*2.5}s"/>')
-    return svg(w, h, "".join(b), f'{p["title"]}: {p["kind"]}. {p["blurb"]}')
+    b.append("</g></g>")
+    return svg(TILE_W, h, "".join(b), ["serif", "serif-i", "sans", "mono"], f"{label}: {big} {word}. {blurb}")
+
+
+# ---- section title + repo cards -----------------------------------------------
+def title(text, italic, dark):
+    fill = "#f0f0ee" if dark else INK
+    body = (f'<text class="u" x="2" y="46" font-family="{SERIF}" font-size="36" fill="{fill}">{escape(text)} '
+            f'<tspan font-style="italic">{escape(italic)}</tspan></text>')
+    return svg(W, 64, body, ["serif", "serif-i"], f"{text} {italic}")
+
+
+def repo_card(i, r):
+    h = 188
+    w = TILE_W - 8
+    color = LANG_DOT.get(r["language"], [TECH, COLORS["studio"], COLORS["learn"]][i % 3])
+    b = [f'<g transform="translate({4 if i else 0} 0)" class="u"{at(.2 + i*.12)}>',
+         f'<rect width="{w:.3f}" height="{h-GAP}" rx="14" fill="{PAPER}"/>',
+         f'<rect x="24" y="30" width="8" height="8" rx="2" fill="{color}"/>',
+         f'<text x="40" y="39" font-family="{SANS}" font-weight="600" font-size="18" fill="{INK}">'
+         f'{escape(r["name"][:24])}</text>']
+    for j, ln in enumerate(wrap(r["description"] or "No description yet.", 34)[:3]):
+        b.append(f'<text x="24" y="{74 + j*21}" font-family="{SANS}" font-size="14" fill="{INK_SOFT}">'
+                 f'{escape(ln)}</text>')
+    meta = "   ".join(x for x in [r["language"], f'★ {r["stars"]}'] if x)
+    b.append(f'<text x="24" y="{h-GAP-24}" font-family="{MONO}" font-size="12" fill="{MUTED}">{escape(meta)}</text>')
+    b.append(f'<text x="{w-24:.1f}" y="{h-GAP-22}" text-anchor="end" font-family="{SANS}" font-size="16" '
+             f'fill="{TECH}">↗</text></g>')
+    return svg(TILE_W, h, "".join(b), ["sans", "sans-b", "mono"], f'{r["name"]}: {r["description"]}')
+
+
+# ---- README block -------------------------------------------------------------
+def readme_block(data):
+    def img(src, alt, width="100%"):
+        return f'<img src="./cards/{src}" width="{width}" alt="{escape(alt)}" />'
+    third = "33.333%"
+    lines = [
+        "<!-- cards:start (generated by scripts/render_cards.py; edit the script, not this block) -->",
+        '<div align="center">',
+        f'<a href="{LINK_URL}">{img("hero.svg", f"{FIRST} {LAST}. {EYEBROW.capitalize()}.")}</a><br>',
+        img("heatmap.svg", "Contribution graph, in blue, refreshed daily") + "<br>",
+        img("activity.svg", "Contributions in the last 12 months, by month, with streak and busiest day") + "<br>",
+        "".join(img(f"{t[0]}.svg", f"{t[1]}: {t[3]} {t[4]}", third) for t in TILES) + "<br>",
+        '<picture><source media="(prefers-color-scheme: dark)" srcset="./cards/title-building-dark.svg" />'
+        + img("title-building-light.svg", "What I'm building") + "</picture><br>",
+        "".join(f'<a href="{r["url"]}">{img(f"repo-{i}.svg", r["name"], third)}</a>'
+                for i, r in enumerate(data["repos"])),
+        "</div>",
+        "",
+        '<p align="center">',
+        " &nbsp;/&nbsp; ".join(f'<a href="{u}">{t}</a>' for t, u in FOOTER_LINKS),
+        "</p>",
+        "<!-- cards:end -->",
+    ]
+    block = "\n".join(lines)
+    text = open(README).read()
+    new = re.sub(r"<!-- cards:start.*?<!-- cards:end -->", lambda _: block, text, flags=re.S)
+    if "<!-- cards:start" not in text:
+        new = block + "\n\n" + text
+    with open(README, "w") as f:
+        f.write(new)
+    print("updated README.md card block")
 
 
 def main():
     with open(DATA) as f:
         data = json.load(f)
-    write("hero.svg", hero(data))
+    for old in os.listdir(OUT) if os.path.isdir(OUT) else []:
+        if old.endswith(".svg"):
+            os.remove(os.path.join(OUT, old))
+    write("hero.svg", hero())
     write("heatmap.svg", heatmap(data))
-    write("stats.svg", stats_card(data))
-    for i, p in enumerate(PROJECTS):
-        write(p["file"] + ".svg", project(p, i))
+    write("activity.svg", activity(data))
+    for i, t in enumerate(TILES):
+        write(f"{t[0]}.svg", tile(i, *t[1:]))
+    write("title-building-light.svg", title("What I'm", "building", False))
+    write("title-building-dark.svg", title("What I'm", "building", True))
+    for i, r in enumerate(data["repos"]):
+        write(f"repo-{i}.svg", repo_card(i, r))
+    readme_block(data)
 
 
 if __name__ == "__main__":

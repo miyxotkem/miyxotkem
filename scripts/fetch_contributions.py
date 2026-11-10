@@ -30,6 +30,13 @@ query($login: String!) {
         weeks { contributionDays { date contributionCount contributionLevel } }
       }
     }
+    pinnedItems(first: 3, types: REPOSITORY) {
+      nodes { ... on Repository { name description url stargazerCount primaryLanguage { name } } }
+    }
+    repositories(first: 20, ownerAffiliations: OWNER, isFork: false, privacy: PUBLIC,
+                 orderBy: {field: STARGAZERS, direction: DESC}) {
+      nodes { name description url stargazerCount primaryLanguage { name } }
+    }
   }
 }
 """
@@ -38,7 +45,7 @@ LEVELS = {"NONE": 0, "FIRST_QUARTILE": 1, "SECOND_QUARTILE": 2,
           "THIRD_QUARTILE": 3, "FOURTH_QUARTILE": 4}
 
 
-def fetch_days(token):
+def fetch(token):
     body = json.dumps({"query": QUERY, "variables": {"login": USERNAME}}).encode()
     req = urllib.request.Request(
         "https://api.github.com/graphql",
@@ -51,11 +58,32 @@ def fetch_days(token):
         payload = json.load(resp)
     if payload.get("errors"):
         raise RuntimeError(payload["errors"])
-    weeks = payload["data"]["user"]["contributionsCollection"]["contributionCalendar"]["weeks"]
-    return [
+    user = payload["data"]["user"]
+    weeks = user["contributionsCollection"]["contributionCalendar"]["weeks"]
+    days = [
         {"date": d["date"], "count": d["contributionCount"], "level": LEVELS.get(d["contributionLevel"], 0)}
         for w in weeks for d in w["contributionDays"]
     ]
+    # Pinned repos first, then most-starred public repos (skipping this profile repo).
+    seen, repos = set(), []
+    for r in user["pinnedItems"]["nodes"] + user["repositories"]["nodes"]:
+        if not r or r["name"] in seen or r["name"].lower() == USERNAME.lower():
+            continue
+        seen.add(r["name"])
+        repos.append({"name": r["name"], "description": r["description"] or "", "url": r["url"],
+                      "stars": r["stargazerCount"],
+                      "language": (r["primaryLanguage"] or {}).get("name", "")})
+    return days, repos[:3]
+
+
+SAMPLE_REPOS = [
+    {"name": "uav-detection", "description": "Real-time drone detection in live video with a deep learning pipeline.",
+     "url": f"https://github.com/{USERNAME}", "stars": 0, "language": "Python"},
+    {"name": "elearning-hub", "description": "Desktop education management system with real-time Firebase sync.",
+     "url": f"https://github.com/{USERNAME}", "stars": 0, "language": "C#"},
+    {"name": "dotnet-lab", "description": "Experiments with .NET 8, WPF and clean desktop architecture.",
+     "url": f"https://github.com/{USERNAME}", "stars": 0, "language": "C#"},
+]
 
 
 def sample_days():
@@ -108,9 +136,9 @@ def stats(days):
 def main():
     token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
     if "--sample" in sys.argv:
-        days = sample_days()
+        days, repos = sample_days(), SAMPLE_REPOS
     elif token:
-        days = fetch_days(token)
+        days, repos = fetch(token)
     else:
         sys.exit("GITHUB_TOKEN not set (use --sample for demo data)")
 
@@ -118,7 +146,7 @@ def main():
     out = {"user": USERNAME,
            "updated": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
            "sample": "--sample" in sys.argv,
-           "stats": stats(days), "days": days}
+           "stats": stats(days), "repos": repos, "days": days}
     os.makedirs(os.path.dirname(OUT_PATH), exist_ok=True)
     with open(OUT_PATH, "w") as f:
         json.dump(out, f, indent=1)
