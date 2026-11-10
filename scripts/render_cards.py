@@ -278,13 +278,13 @@ def activity(data):
         (f'{best["count"]}', "on the busiest day"),
     ]
     for i, (big, sub) in enumerate(rows):
-        y = 112 + i*92
-        b.append(f'<g class="u"{at(.5 + i*.15)}><text x="{rx}" y="{y}" font-family="{SERIF}" font-size="46" '
+        y = 102 + i*97  # number baseline; divider sits midway between rows
+        b.append(f'<g class="u"{at(.5 + i*.15)}><text x="{rx}" y="{y}" font-family="{SERIF}" font-size="44" '
                  f'letter-spacing="-.5" fill="{INK}">{big}</text>'
-                 f'<text x="{rx+1}" y="{y+28}" font-family="{SANS}" font-size="14.5" fill="{INK_SOFT}">'
+                 f'<text x="{rx+1}" y="{y+25}" font-family="{SANS}" font-size="14.5" fill="{INK_SOFT}">'
                  f'{escape(sub)}</text></g>')
         if i < 2:
-            b.append(f'<rect class="i"{at(.7 + i*.15)} x="{rx}" y="{y+52}" width="196" height="1" fill="{RULE}"/>')
+            b.append(f'<rect class="i"{at(.7 + i*.15)} x="{rx}" y="{y+48}" width="196" height="1" fill="{RULE}"/>')
     label = (f'{s["total"]:,} contributions in the last 12 months. {cur} day current streak, longest {lng}. '
              f'{s["active_days"]} of {len(data["days"])} days with a commit. {best["count"]} on the busiest day.')
     return svg(W, h, "".join(b), ["serif", "serif-i", "sans", "mono"], label)
@@ -376,13 +376,13 @@ def hours_card(data):
         (f'{total:,}', "commits in the last year"),
     ]
     for i, (big, sub) in enumerate(rows):
-        y = 112 + i*92
-        b.append(f'<g class="u"{at(.5 + i*.15)}><text x="{rx}" y="{y}" font-family="{SERIF}" font-size="46" '
+        y = 102 + i*97  # number baseline; divider sits midway between rows
+        b.append(f'<g class="u"{at(.5 + i*.15)}><text x="{rx}" y="{y}" font-family="{SERIF}" font-size="44" '
                  f'letter-spacing="-.5" fill="{INK}">{big}</text>'
-                 f'<text x="{rx+1}" y="{y+28}" font-family="{SANS}" font-size="14.5" fill="{INK_SOFT}">'
+                 f'<text x="{rx+1}" y="{y+25}" font-family="{SANS}" font-size="14.5" fill="{INK_SOFT}">'
                  f'{escape(sub)}</text></g>')
         if i < 2:
-            b.append(f'<rect class="i"{at(.7 + i*.15)} x="{rx}" y="{y+52}" width="196" height="1" fill="{RULE}"/>')
+            b.append(f'<rect class="i"{at(.7 + i*.15)} x="{rx}" y="{y+48}" width="196" height="1" fill="{RULE}"/>')
     label = (f"Commits by hour of day ({tzs}): {lead} {word}. Busiest hour {hour_label(peak_h)}, "
              f"{after6}% after 6 pm, {total} commits in the last year.")
     return svg(W, h, "".join(b), ["serif", "serif-i", "sans", "mono"], label)
