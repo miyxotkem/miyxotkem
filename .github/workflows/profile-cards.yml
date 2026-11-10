@@ -5,7 +5,7 @@ name: Refresh profile cards
 
 "on":
   schedule:
-    - cron: "23 1 * * *"   # ~08:23 in Vietnam (UTC+7)
+    - cron: "0 0 * * *"    # 07:00 in Vietnam (UTC+7)
   workflow_dispatch: {}
   push:
     branches: [main]
