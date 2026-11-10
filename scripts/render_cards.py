@@ -34,13 +34,14 @@ FIRST, LAST = "Thinh Phat", "Ho"
 EYEBROW = "SOFTWARE ENGINEERING @ UIT"
 BLURB = ["I build computer vision systems that spot drones,",
          "and the .NET software that ships them."]
-LINK_TEXT, LINK_URL = "github.com/miyxotkem", "https://github.com/miyxotkem"
+LINK_TEXT, LINK_URL = "thinhphatho.pages.dev", "https://thinhphatho.pages.dev/"
 TILES = [  # (file, label, colour key, big text, italic word, blurb)
     ("research", "RESEARCH", "tech", "UAV", "detection", "Real-time deep learning pipelines that find drones in live video."),
     ("build", "BUILD", "studio", "2", "systems", "UAV Detection Engine and the Cloud E-Learning Hub, both shipped."),
     ("learn", "LEARN", "learn", "UIT", "VNUHCM", "Software Engineering student in Ho Chi Minh City, Vietnam."),
 ]
-FOOTER_LINKS = [("github", "https://github.com/miyxotkem"),
+FOOTER_LINKS = [("portfolio", "https://thinhphatho.pages.dev/"),
+                ("github", "https://github.com/miyxotkem"),
                 ("facebook", "https://www.facebook.com/miyxotkem.ne"),
                 ("instagram", "https://www.instagram.com/fettuccinecarbonaraghhh"),
                 ("resume", "https://github.com/miyxotkem/miyxotkem/blob/main/resume.pdf"),
