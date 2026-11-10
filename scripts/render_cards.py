@@ -89,8 +89,8 @@ CSS = """
 .beat{animation:beat 1.6s ease-in-out infinite}
 .drop{opacity:0;transform-box:fill-box;transform-origin:50% 70%;animation:drop 1s cubic-bezier(.2,.8,.2,1) both}
 .t{animation:type 1.6s steps(60) both}
-.shine{animation:shine 5s ease-in-out infinite}
-@media (prefers-reduced-motion: reduce){.u,.i,.b,.d,.drop,.t{animation:none!important;opacity:1!important;transform:none!important;clip-path:none!important}.beat,.shine{animation:none}}
+.shine{transform:translateX(-200px);animation:shine 5s ease-in-out infinite both}
+@media (prefers-reduced-motion: reduce){.u,.i,.b,.d,.drop,.t{animation:none!important;opacity:1!important;transform:none!important;clip-path:none!important}.beat{animation:none}.shine{display:none}}
 """
 
 _font_cache = {}
