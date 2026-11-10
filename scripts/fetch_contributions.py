@@ -2,7 +2,8 @@
 """
 Fetch the last year of daily contribution counts for the profile owner and
 write data/contributions.json with the raw days plus derived stats
-(total, current streak, longest streak, busiest day, monthly totals).
+(total, current streak, longest streak, busiest day, monthly totals),
+plus your commits from the last year bucketed by local hour of day.
 
 Uses GitHub's GraphQL API with the token Actions provides (GITHUB_TOKEN).
 Standard library only, so the workflow needs no pip install.
@@ -21,22 +22,34 @@ USERNAME = os.environ.get("GH_PROFILE_USER", "miyxotkem")
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 OUT_PATH = os.path.join(ROOT, "data", "contributions.json")
 
-QUERY = """
+TZ_OFFSET = int(os.environ.get("PROFILE_TZ_OFFSET", "7"))  # hours from UTC for the by-hour chart
+
+CALENDAR = """
 query($login: String!) {
   user(login: $login) {
+    id
     contributionsCollection {
       contributionCalendar {
-        totalContributions
         weeks { contributionDays { date contributionCount contributionLevel } }
       }
     }
-    pinnedItems(first: 3, types: REPOSITORY) {
-      nodes { ... on Repository { name description url stargazerCount primaryLanguage { name } } }
+    repositories(first: 50, ownerAffiliations: OWNER, isFork: false,
+                 orderBy: {field: PUSHED_AT, direction: DESC}) {
+      nodes { name owner { login } }
     }
-    repositories(first: 20, ownerAffiliations: OWNER, isFork: false, privacy: PUBLIC,
-                 orderBy: {field: STARGAZERS, direction: DESC}) {
-      nodes { name description url stargazerCount primaryLanguage { name } }
-    }
+  }
+}
+"""
+
+HISTORY = """
+query($owner: String!, $name: String!, $uid: ID!, $since: GitTimestamp!, $after: String) {
+  repository(owner: $owner, name: $name) {
+    defaultBranchRef { target { ... on Commit {
+      history(first: 100, after: $after, since: $since, author: {id: $uid}) {
+        pageInfo { hasNextPage endCursor }
+        nodes { authoredDate }
+      }
+    } } }
   }
 }
 """
@@ -45,8 +58,8 @@ LEVELS = {"NONE": 0, "FIRST_QUARTILE": 1, "SECOND_QUARTILE": 2,
           "THIRD_QUARTILE": 3, "FOURTH_QUARTILE": 4}
 
 
-def fetch(token):
-    body = json.dumps({"query": QUERY, "variables": {"login": USERNAME}}).encode()
+def gql(token, query, variables):
+    body = json.dumps({"query": query, "variables": variables}).encode()
     req = urllib.request.Request(
         "https://api.github.com/graphql",
         data=body,
@@ -58,32 +71,48 @@ def fetch(token):
         payload = json.load(resp)
     if payload.get("errors"):
         raise RuntimeError(payload["errors"])
-    user = payload["data"]["user"]
+    return payload["data"]
+
+
+def commit_hours(token, uid, repos):
+    """Count your commits from the last year by local hour of day (0-23)."""
+    since = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=365)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    tz = datetime.timezone(datetime.timedelta(hours=TZ_OFFSET))
+    hours = [0] * 24
+    for r in repos:
+        after = None
+        for _ in range(10):  # at most 1,000 commits per repo
+            try:
+                data = gql(token, HISTORY, {"owner": r["owner"]["login"], "name": r["name"],
+                                            "uid": uid, "since": since, "after": after})
+            except Exception as e:  # an empty or inaccessible repo shouldn't sink the whole run
+                print(f"skip {r['name']}: {e}", file=sys.stderr)
+                break
+            ref = (data.get("repository") or {}).get("defaultBranchRef")
+            if not ref:
+                break
+            hist = ref["target"]["history"]
+            for n in hist["nodes"]:
+                t = datetime.datetime.fromisoformat(n["authoredDate"].replace("Z", "+00:00"))
+                hours[t.astimezone(tz).hour] += 1
+            if not hist["pageInfo"]["hasNextPage"]:
+                break
+            after = hist["pageInfo"]["endCursor"]
+    return hours
+
+
+def fetch(token):
+    user = gql(token, CALENDAR, {"login": USERNAME})["user"]
     weeks = user["contributionsCollection"]["contributionCalendar"]["weeks"]
     days = [
         {"date": d["date"], "count": d["contributionCount"], "level": LEVELS.get(d["contributionLevel"], 0)}
         for w in weeks for d in w["contributionDays"]
     ]
-    # Pinned repos first, then most-starred public repos (skipping this profile repo).
-    seen, repos = set(), []
-    for r in user["pinnedItems"]["nodes"] + user["repositories"]["nodes"]:
-        if not r or r["name"] in seen or r["name"].lower() == USERNAME.lower():
-            continue
-        seen.add(r["name"])
-        repos.append({"name": r["name"], "description": r["description"] or "", "url": r["url"],
-                      "stars": r["stargazerCount"],
-                      "language": (r["primaryLanguage"] or {}).get("name", "")})
-    return days, repos[:3]
+    return days, commit_hours(token, user["id"], user["repositories"]["nodes"])
 
 
-SAMPLE_REPOS = [
-    {"name": "uav-detection", "description": "Real-time drone detection in live video with a deep learning pipeline.",
-     "url": f"https://github.com/{USERNAME}", "stars": 0, "language": "Python"},
-    {"name": "elearning-hub", "description": "Desktop education management system with real-time Firebase sync.",
-     "url": f"https://github.com/{USERNAME}", "stars": 0, "language": "C#"},
-    {"name": "dotnet-lab", "description": "Experiments with .NET 8, WPF and clean desktop architecture.",
-     "url": f"https://github.com/{USERNAME}", "stars": 0, "language": "C#"},
-]
+# Roughly your real shape (from the old productive-time card), for offline previews.
+SAMPLE_HOURS = [18, 10, 0, 0, 0, 2, 0, 0, 1, 0, 6, 8, 25, 10, 4, 13, 9, 1, 2, 7, 10, 36, 33, 39]
 
 
 def sample_days():
@@ -136,9 +165,9 @@ def stats(days):
 def main():
     token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
     if "--sample" in sys.argv:
-        days, repos = sample_days(), SAMPLE_REPOS
+        days, hours = sample_days(), SAMPLE_HOURS
     elif token:
-        days, repos = fetch(token)
+        days, hours = fetch(token)
     else:
         sys.exit("GITHUB_TOKEN not set (use --sample for demo data)")
 
@@ -146,7 +175,8 @@ def main():
     out = {"user": USERNAME,
            "updated": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
            "sample": "--sample" in sys.argv,
-           "stats": stats(days), "repos": repos, "days": days}
+           "tz_offset": TZ_OFFSET, "hours": hours,
+           "stats": stats(days), "days": days}
     os.makedirs(os.path.dirname(OUT_PATH), exist_ok=True)
     with open(OUT_PATH, "w") as f:
         json.dump(out, f, indent=1)

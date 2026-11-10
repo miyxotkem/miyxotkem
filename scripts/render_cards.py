@@ -41,21 +41,23 @@ TILES = [  # (file, label, colour key, big text, italic word, blurb)
     ("learn", "LEARN", "learn", "UIT", "VNUHCM", "Software Engineering student in Ho Chi Minh City, Vietnam."),
 ]
 FOOTER_LINKS = [("github", "https://github.com/miyxotkem"),
+                ("facebook", "https://www.facebook.com/miyxotkem.ne"),
+                ("instagram", "https://www.instagram.com/fettuccinecarbonaraghhh"),
                 ("resume", "https://github.com/miyxotkem/miyxotkem/blob/main/resume.pdf"),
                 ("email", "mailto:hothinhphat06@gmail.com")]
 
 # ---- tokens -----------------------------------------------------------------
-PAPER = "#f3f3f1"
-EMPTY = "#e2e2de"
-INK = "#111111"
-INK_SOFT = "#3a3a3c"
-MUTED = "#6e6e73"
-RULE = "#dcdcd7"
-GREY_BAR = "#c8c8c3"
-COLORS = {"tech": "#2f55ff", "studio": "#ef3b2d", "learn": "#ffc81a"}
-TECH = COLORS["tech"]
-BLUES = [EMPTY, "#c9d3ff", "#93a7ff", "#5e7bff", "#2f55ff", "#1a37c9"]
-LANG_DOT = {"Python": TECH, "C#": COLORS["studio"], "TypeScript": TECH, "JavaScript": COLORS["learn"]}
+PAPER = "#f5f3ec"      # warm paper
+EMPTY = "#e6e1d6"
+INK = "#141413"
+INK_SOFT = "#3d3a35"
+MUTED = "#75706a"
+RULE = "#ddd7ca"
+GREY_BAR = "#cdc6b8"
+COLORS = {"tech": "#d97757", "studio": "#1f1e1d", "learn": "#e3b04b"}  # orange, ink, mustard
+ACCENT = COLORS["tech"]
+ACCENT_WORD = "orange"
+SHADES = [EMPTY, "#ecc9b9", "#e5ab92", "#df8f6f", "#d97757", "#a24f33"]  # heatmap, light to dark
 W = 880
 GAP = 12          # space under each card, baked in so the README stays gapless
 TILE_W = W / 3
@@ -138,7 +140,7 @@ def card(w, h, fill=PAPER):
     return f'<rect width="{w:.3f}" height="{h - GAP}" rx="14" fill="{fill}"/>'
 
 
-def eyebrow(x, y, text, color=TECH, delay=0):
+def eyebrow(x, y, text, color=ACCENT, delay=0):
     return (f'<g class="u"{at(delay)}><rect x="{x}" y="{y-9}" width="8" height="8" rx="1.5" fill="{color}"/>'
             f'<text x="{x+18}" y="{y}" font-family="{MONO}" font-size="12" letter-spacing="1.8" fill="{INK_SOFT}">'
             f"{escape(text)}</text></g>")
@@ -158,7 +160,7 @@ def hero():
                  f'fill="{INK_SOFT}">{escape(ln)}</text>')
     b.append(f'<g class="u"{at(.75)}><text x="50" y="{394}" font-family="{MONO}" font-size="13.5" fill="{INK}">'
              f'{escape(LINK_TEXT)}</text><text x="{50 + len(LINK_TEXT)*8.2 + 16}" y="394" font-family="{SANS}" '
-             f'font-size="15" fill="{TECH}">↗</text></g>')
+             f'font-size="15" fill="{ACCENT}">↗</text></g>')
 
     # ASCII picture, typed in line by line on the right
     if os.path.exists(PORTRAIT):
@@ -198,7 +200,7 @@ def heatmap(data):
     h = 244
     b = [card(W, h)]
     b.append(f'<text class="u" x="48" y="72" font-family="{SERIF}" font-size="40" fill="{INK}">Every day, '
-             f'<tspan font-style="italic" fill="{TECH}">in blue</tspan></text>')
+             f'<tspan font-style="italic" fill="{ACCENT}">in {ACCENT_WORD}</tspan></text>')
     b.append(f'<text class="u"{at(.1)} x="{W-48}" y="68" text-anchor="end" font-family="{MONO}" font-size="12" '
              f'letter-spacing="1.8" fill="{INK_SOFT}">REFRESHED DAILY</text>')
 
@@ -217,7 +219,7 @@ def heatmap(data):
         x, y = x0 + col*step, y0 + row*step
         lv = level_of(d["count"], cuts)
         b.append(f'<rect class="d"{at(.25 + col*.018 + row*.012)} x="{x:.1f}" y="{y:.1f}" width="{cell:.1f}" '
-                 f'height="{cell:.1f}" rx="3" fill="{BLUES[lv]}"><title>{d["count"]} on {d["date"]}</title></rect>')
+                 f'height="{cell:.1f}" rx="3" fill="{SHADES[lv]}"><title>{d["count"]} on {d["date"]}</title></rect>')
         dt = datetime.date.fromisoformat(d["date"])
         if dt.day <= 7 and row == 0 and dt.month not in seen and 1 < col and x < W - 48 - 6*14 - 110:
             seen.add(dt.month)
@@ -227,11 +229,11 @@ def heatmap(data):
     lx = W - 48 - 6*14 - 34
     b.append(f'<g class="i"{at(1.1)}><text x="{lx-8}" y="{ly:.1f}" text-anchor="end" font-family="{MONO}" '
              f'font-size="11" fill="{MUTED}">less</text>')
-    for i, c in enumerate(BLUES):
+    for i, c in enumerate(SHADES):
         b.append(f'<rect x="{lx + i*14}" y="{ly-9:.1f}" width="10" height="10" rx="2" fill="{c}"/>')
     b.append(f'<text x="{lx + 6*14 + 2}" y="{ly:.1f}" font-family="{MONO}" font-size="11" fill="{MUTED}">more</text></g>')
     return svg(W, h, "".join(b), ["serif", "serif-i", "mono"],
-               "Contribution graph for the last 12 months, in blue, refreshed daily")
+               f"Contribution graph for the last 12 months, in {ACCENT_WORD}, refreshed daily")
 
 
 # ---- activity ---------------------------------------------------------------
@@ -254,15 +256,15 @@ def activity(data):
         partial = m["month"] == this_month
         bh = max(4, min(1, m["count"] / peak) * (base - top))
         x = bx + i*slot + slot*0.1
-        fill = GREY_BAR if partial else TECH if m["count"] == peak else INK
+        fill = GREY_BAR if partial else ACCENT if m["count"] == peak else INK
         b.append(f'<rect class="b"{at(.4 + i*.06)} x="{x:.1f}" y="{base-bh:.1f}" width="{slot*0.8:.1f}" '
                  f'height="{bh:.1f}" rx="4" fill="{fill}"><title>{m["count"]} in {m["month"]}</title></rect>')
         mon = datetime.date.fromisoformat(m["month"] + "-01").strftime("%b")
         b.append(f'<text class="i"{at(.8)} x="{x + slot*0.4:.1f}" y="{base+22}" text-anchor="middle" '
                  f'font-family="{MONO}" font-size="11" fill="{MUTED}">{mon}</text>')
-        if fill == TECH:
+        if fill == ACCENT:
             b.append(f'<text class="i"{at(1.3)} x="{x + slot*0.4:.1f}" y="{base-bh-9:.1f}" text-anchor="middle" '
-                     f'font-family="{MONO}" font-size="11.5" fill="{TECH}">{m["count"]:,}</text>')
+                     f'font-family="{MONO}" font-size="11.5" fill="{ACCENT}">{m["count"]:,}</text>')
 
     # right column: three numbers with rules between them
     rx = 640
@@ -310,7 +312,7 @@ def tile(i, label, key, big, word, blurb):
     return svg(TILE_W, h, "".join(b), ["serif", "serif-i", "sans", "mono"], f"{label}: {big} {word}. {blurb}")
 
 
-# ---- section title + repo cards -----------------------------------------------
+# ---- section title + commits-by-hour card ------------------------------------
 def title(text, italic, dark):
     fill = "#f0f0ee" if dark else INK
     body = (f'<text class="u" x="2" y="46" font-family="{SERIF}" font-size="36" fill="{fill}">{escape(text)} '
@@ -318,23 +320,71 @@ def title(text, italic, dark):
     return svg(W, 64, body, ["serif", "serif-i"], f"{text} {italic}")
 
 
-def repo_card(i, r):
-    h = 188
-    w = TILE_W - 8
-    color = LANG_DOT.get(r["language"], [TECH, COLORS["studio"], COLORS["learn"]][i % 3])
-    b = [f'<g transform="translate({4 if i else 0} 0)" class="u"{at(.2 + i*.12)}>',
-         f'<rect width="{w:.3f}" height="{h-GAP}" rx="14" fill="{PAPER}"/>',
-         f'<rect x="24" y="30" width="8" height="8" rx="2" fill="{color}"/>',
-         f'<text x="40" y="39" font-family="{SANS}" font-weight="600" font-size="18" fill="{INK}">'
-         f'{escape(r["name"][:24])}</text>']
-    for j, ln in enumerate(wrap(r["description"] or "No description yet.", 34)[:3]):
-        b.append(f'<text x="24" y="{74 + j*21}" font-family="{SANS}" font-size="14" fill="{INK_SOFT}">'
-                 f'{escape(ln)}</text>')
-    meta = "   ".join(x for x in [r["language"], f'★ {r["stars"]}'] if x)
-    b.append(f'<text x="24" y="{h-GAP-24}" font-family="{MONO}" font-size="12" fill="{MUTED}">{escape(meta)}</text>')
-    b.append(f'<text x="{w-24:.1f}" y="{h-GAP-22}" text-anchor="end" font-family="{SANS}" font-size="16" '
-             f'fill="{TECH}">↗</text></g>')
-    return svg(TILE_W, h, "".join(b), ["sans", "sans-b", "mono"], f'{r["name"]}: {r["description"]}')
+def hour_label(h):
+    return f"{h % 12 or 12} {'am' if h < 12 else 'pm'}"
+
+
+def hours_card(data):
+    hours = data["hours"]
+    tz = data.get("tz_offset", 7)
+    total = sum(hours)
+    h = 352
+    b = [card(W, h)]
+    tzs = f"UTC{'+' if tz >= 0 else '-'}{abs(tz)}"
+    b.append(f'<text class="u" x="44" y="62" font-family="{MONO}" font-size="12" letter-spacing="1.8" '
+             f'fill="{INK_SOFT}">COMMITS BY HOUR OF DAY · {tzs}</text>')
+
+    groups = {"night": [22, 23, 0, 1, 2, 3, 4], "morning": [5, 6, 7, 8, 9, 10, 11],
+              "day": [12, 13, 14, 15, 16, 17], "evening": [18, 19, 20, 21]}
+    names = {"night": ("Mostly a", "night owl"), "morning": ("Mostly an", "early bird"),
+             "day": ("Mostly a", "daytime coder"), "evening": ("Mostly an", "evening coder")}
+    top = max(groups, key=lambda g: sum(hours[x] for x in groups[g]))
+    lead, word = names[top] if total else ("Waiting for", "commits")
+    b.append(f'<text class="u"{at(.1)} x="40" y="122" font-family="{SERIF}" font-size="66" letter-spacing="-1" '
+             f'fill="{INK}">{lead} <tspan font-style="italic" fill="{ACCENT}">{word}</tspan></text>')
+
+    peak_h = max(range(24), key=lambda x: hours[x])
+    peak = max(hours + [1])
+    bx, bw, base, ceil = 44, 548, h - GAP - 44, 160
+    slot = bw / 24
+    # soft band behind the night hours (10 pm to 5 am)
+    for x0, x1 in ((0, 5), (22, 24)):
+        b.append(f'<rect class="i" x="{bx + x0*slot:.1f}" y="{ceil-6}" width="{(x1-x0)*slot:.1f}" '
+                 f'height="{base-ceil+6}" fill="{EMPTY}" opacity=".55"/>')
+    b.append(f'<text class="i"{at(.3)} x="{bx + 2.5*slot:.1f}" y="{ceil+8}" text-anchor="middle" '
+             f'font-family="{MONO}" font-size="10" letter-spacing="1.5" fill="{MUTED}">NIGHT</text>')
+    for i, c in enumerate(hours):
+        bh = max(3, c / peak * (base - ceil - 22))
+        x = bx + i*slot + slot*0.12
+        fill = ACCENT if i == peak_h and c else INK if c else GREY_BAR
+        b.append(f'<rect class="b"{at(.35 + i*.035)} x="{x:.1f}" y="{base-bh:.1f}" width="{slot*0.76:.1f}" '
+                 f'height="{bh:.1f}" rx="3" fill="{fill}"><title>{c} commits at {hour_label(i)}</title></rect>')
+        if i == peak_h and c:
+            b.append(f'<text class="i"{at(1.4)} x="{x + slot*0.38:.1f}" y="{base-bh-9:.1f}" text-anchor="middle" '
+                     f'font-family="{MONO}" font-size="11.5" fill="{ACCENT}">{c}</text>')
+    for i in (0, 6, 12, 18, 23):
+        b.append(f'<text class="i"{at(.8)} x="{bx + i*slot + slot*0.5:.1f}" y="{base+22}" text-anchor="middle" '
+                 f'font-family="{MONO}" font-size="11" fill="{MUTED}">{i:02d}</text>')
+
+    rx = 640
+    after6 = round(100 * sum(hours[18:]) / total) if total else 0
+    rows = [
+        (f'{hour_label(peak_h).split()[0]} <tspan font-style="italic">{hour_label(peak_h).split()[1]}</tspan>',
+         "my busiest hour"),
+        (f'{after6}<tspan fill="{MUTED}">%</tspan>', "of commits after 6 pm"),
+        (f'{total:,}', "commits in the last year"),
+    ]
+    for i, (big, sub) in enumerate(rows):
+        y = 112 + i*92
+        b.append(f'<g class="u"{at(.5 + i*.15)}><text x="{rx}" y="{y}" font-family="{SERIF}" font-size="46" '
+                 f'letter-spacing="-.5" fill="{INK}">{big}</text>'
+                 f'<text x="{rx+1}" y="{y+28}" font-family="{SANS}" font-size="14.5" fill="{INK_SOFT}">'
+                 f'{escape(sub)}</text></g>')
+        if i < 2:
+            b.append(f'<rect class="i"{at(.7 + i*.15)} x="{rx}" y="{y+52}" width="196" height="1" fill="{RULE}"/>')
+    label = (f"Commits by hour of day ({tzs}): {lead} {word}. Busiest hour {hour_label(peak_h)}, "
+             f"{after6}% after 6 pm, {total} commits in the last year.")
+    return svg(W, h, "".join(b), ["serif", "serif-i", "sans", "mono"], label)
 
 
 # ---- README block -------------------------------------------------------------
@@ -346,13 +396,12 @@ def readme_block(data):
         "<!-- cards:start (generated by scripts/render_cards.py; edit the script, not this block) -->",
         '<div align="center">',
         f'<a href="{LINK_URL}">{img("hero.svg", f"{FIRST} {LAST}. {EYEBROW.capitalize()}.")}</a><br>',
-        img("heatmap.svg", "Contribution graph, in blue, refreshed daily") + "<br>",
+        img("heatmap.svg", f"Contribution graph, in {ACCENT_WORD}, refreshed daily") + "<br>",
         img("activity.svg", "Contributions in the last 12 months, by month, with streak and busiest day") + "<br>",
         "".join(img(f"{t[0]}.svg", f"{t[1]}: {t[3]} {t[4]}", third) for t in TILES) + "<br>",
-        '<picture><source media="(prefers-color-scheme: dark)" srcset="./cards/title-building-dark.svg" />'
-        + img("title-building-light.svg", "What I'm building") + "</picture><br>",
-        "".join(f'<a href="{r["url"]}">{img(f"repo-{i}.svg", r["name"], third)}</a>'
-                for i, r in enumerate(data["repos"])),
+        '<picture><source media="(prefers-color-scheme: dark)" srcset="./cards/title-code-dark.svg" />'
+        + img("title-code-light.svg", "When I code") + "</picture><br>",
+        img("hours.svg", "Commits by hour of day"),
         "</div>",
         "",
         '<p align="center">',
@@ -381,10 +430,9 @@ def main():
     write("activity.svg", activity(data))
     for i, t in enumerate(TILES):
         write(f"{t[0]}.svg", tile(i, *t[1:]))
-    write("title-building-light.svg", title("What I'm", "building", False))
-    write("title-building-dark.svg", title("What I'm", "building", True))
-    for i, r in enumerate(data["repos"]):
-        write(f"repo-{i}.svg", repo_card(i, r))
+    write("title-code-light.svg", title("When I", "code", False))
+    write("title-code-dark.svg", title("When I", "code", True))
+    write("hours.svg", hours_card(data))
     readme_block(data)
 
 
