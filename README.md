@@ -1,41 +1,15 @@
-<!-- 🌟 ABSOLUTE HERO SECTION 🌟 -->
-<p align="center">
-  <img src=".github/assets/hero-pasta-ai.png" width="100%" alt="miyxotkem - Software Engineering at UIT, Computer Vision, AIOps and .NET - cream pasta, code, AI and drone illustration" />
-</p>
-
-<p align="center">
-  <a href="https://github.com/miyxotkem">
-    <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=24&pause=1000&color=00E5FF&center=true&vCenter=true&width=800&lines=System.out.println(%22Hello+World!%22);Initializing+Computer+Vision+Models...;Deploying+AIOps+Architecture...;Pushing+C%23+.NET+Microservices...;Target+Locked:+UAV+Detection+Active" alt="Typing SVG" />
-  </a>
-</p>
+<!-- Animated cards: drawn by scripts/render_cards.py from real contribution data and
+     refreshed daily by .github/workflows/profile-cards.yml. Edit the text in that script. -->
+<div align="center">
+<img src="./cards/hero.svg" width="100%" alt="Thinh Phat Ho (miyxotkem) - Software Engineering at UIT. Real-time UAV detection, .NET, computer vision, AIOps." /><br>
+<img src="./cards/heatmap.svg" width="100%" alt="Contribution graph for the last 12 months, refreshed daily" /><br>
+<img src="./cards/stats.svg" width="100%" alt="Contribution totals, streaks and monthly activity" /><br>
+<img src="./cards/project-uav.svg" width="50%" alt="UAV Detection Engine" /><img src="./cards/project-elearning.svg" width="50%" alt="Cloud E-Learning Hub" />
+</div>
 
 <p align="center">
   <img src="https://komarev.com/ghpvc/?username=miyxotkem&label=MAINFRAME_VISITORS&color=00e5ff&style=flat-square" alt="Mainframe Visitors" />
 </p>
-
-<br/>
-
-<!-- 💻 HOLOGRAPHIC TERMINAL BIO -->
-<div align="center">
-  <table border="0" width="85%">
-    <tr>
-      <td bgcolor="#0d1117">
-<pre>
-<font color="#00e5ff"><b>root@miyxotkem-mainframe</b></font>:<font color="#58a6ff"><b>~</b></font>$ ./execute_profile.sh
-[+] <b>ACCESS GRANTED.</b> Initializing developer telemetry...
-
-> <b>IDENTITY:</b> Thinh Phat Ho (miyxotkem) // Software Engineering @ UIT (VNUHCM) 🇻🇳
-> <b>MISSION:</b> Bridging the gap between robust software architecture and Artificial Intelligence.
-> <b>RESEARCH:</b> Deep Learning pipelines for real-time UAV (Drone) Detection.
-> <b>SPECIALIZATION:</b> Full-Stack Desktop (.NET/WPF), Computer Vision, AIOps, Cloud Infrastructure.
-> <b>COMPUTE_RIG:</b> Windows 11 + WSL2 Ubuntu • NVIDIA RTX GPU (CUDA/cuDNN) • .NET 8 / PyTorch
-
-[+] Mainframe online. Systems operational.
-</pre>
-      </td>
-    </tr>
-  </table>
-</div>
 
 <br/>
 
@@ -57,40 +31,6 @@
 </p>
 
 <br/>
-
-<!-- 🛸 DEPLOYED SYSTEMS AND RESEARCH -->
-<h2 align="center">🛸 Deployed Systems and Research</h2>
-
-<table width="100%" align="center">
-  <tr>
-    <td width="50%" valign="top" bgcolor="#0d1117">
-      <h3 align="center"><font color="#00e5ff">🚁 UAV Detection Engine</font></h3>
-      <p align="center"><i>AIOps and Computer Vision Research</i></p>
-      <p>Engineered deep learning pipelines leveraging <b>Hugging Face</b> and <b>OpenCV</b> to detect Unmanned Aerial Vehicles in real-time. Focuses on minimizing latency and integrating AIOps for model monitoring.</p>
-    </td>
-    <td width="50%" valign="top" bgcolor="#0d1117">
-      <h3 align="center"><font color="#00e5ff">📚 Cloud E-Learning Hub</font></h3>
-      <p align="center"><i>Full-Stack Desktop Architecture</i></p>
-      <p>A highly scalable educational management system featuring real-time state synchronizations. Architected using <b>C#, WPF, XAML,</b> and seamlessly integrated with <b>Firebase</b> cloud databases.</p>
-    </td>
-  </tr>
-</table>
-
-<br/>
-
-<!-- 📈 DATA VISUALIZATION -->
-<h2 align="center">📊 Activity and Contributions Matrix</h2>
-
-<!-- Streak Stats -->
-<p align="center">
-  <img src="https://streak-stats.demolab.com/?user=miyxotkem&theme=dark&background=0d1117&border=00e5ff&stroke=00e5ff&ring=00e5ff&fire=00e5ff&currStreakLabel=00e5ff&sideNums=ffffff&sideLabels=ffffff&dates=8b949e&hide_border=false" alt="miyxotkem's streak stats" />
-</p>
-
-<!-- Productivity and Language Distribution -->
-<p align="center">
-  <img src="https://github-profile-summary-cards.vercel.app/api/cards/productive-time?username=miyxotkem&theme=github_dark&utcOffset=7" alt="Productive Time Card" width="49%" />
-  <img src="https://github-profile-summary-cards.vercel.app/api/cards/repos-per-language?username=miyxotkem&theme=github_dark" alt="Repos per Language Card" width="49%" />
-</p>
 
 <!-- 🐍 THE GITHUB SNAKE -->
 <h3 align="center">🐍 Contribution Grid Snake</h3>
