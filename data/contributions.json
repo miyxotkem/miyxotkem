@@ -1,7 +1,34 @@
 {
  "user": "miyxotkem",
- "updated": "2026-11-10 12:45 UTC",
+ "updated": "2026-11-10 12:53 UTC",
  "sample": true,
+ "tz_offset": 7,
+ "hours": [
+  18,
+  10,
+  0,
+  0,
+  0,
+  2,
+  0,
+  0,
+  1,
+  0,
+  6,
+  8,
+  25,
+  10,
+  4,
+  13,
+  9,
+  1,
+  2,
+  7,
+  10,
+  36,
+  33,
+  39
+ ],
  "stats": {
   "total": 1019,
   "current_streak": 3,
@@ -62,29 +89,6 @@
    }
   ]
  },
- "repos": [
-  {
-   "name": "uav-detection",
-   "description": "Real-time drone detection in live video with a deep learning pipeline.",
-   "url": "https://github.com/miyxotkem",
-   "stars": 0,
-   "language": "Python"
-  },
-  {
-   "name": "elearning-hub",
-   "description": "Desktop education management system with real-time Firebase sync.",
-   "url": "https://github.com/miyxotkem",
-   "stars": 0,
-   "language": "C#"
-  },
-  {
-   "name": "dotnet-lab",
-   "description": "Experiments with .NET 8, WPF and clean desktop architecture.",
-   "url": "https://github.com/miyxotkem",
-   "stars": 0,
-   "language": "C#"
-  }
- ],
  "days": [
   {
    "date": "2025-11-09",
