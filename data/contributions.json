@@ -1,6 +1,6 @@
 {
  "user": "miyxotkem",
- "updated": "2026-11-14 05:02 UTC",
+ "updated": "2026-11-15 04:55 UTC",
  "sample": false,
  "tz_offset": 7,
  "hours": [
@@ -30,12 +30,12 @@
   39
  ],
  "stats": {
-  "total": 552,
-  "current_streak": 7,
+  "total": 584,
+  "current_streak": 8,
   "longest_streak": 9,
   "best_day": {
-   "date": "2026-11-09",
-   "count": 33
+   "date": "2026-11-14",
+   "count": 36
   },
   "active_days": 107,
   "monthly": [
@@ -85,46 +85,11 @@
    },
    {
     "month": "2026-11",
-    "count": 160
+    "count": 195
    }
   ]
  },
  "days": [
-  {
-   "date": "2025-11-09",
-   "count": 3,
-   "level": 1
-  },
-  {
-   "date": "2025-11-10",
-   "count": 0,
-   "level": 0
-  },
-  {
-   "date": "2025-11-11",
-   "count": 0,
-   "level": 0
-  },
-  {
-   "date": "2025-11-12",
-   "count": 0,
-   "level": 0
-  },
-  {
-   "date": "2025-11-13",
-   "count": 0,
-   "level": 0
-  },
-  {
-   "date": "2025-11-14",
-   "count": 0,
-   "level": 0
-  },
-  {
-   "date": "2025-11-15",
-   "count": 0,
-   "level": 0
-  },
   {
    "date": "2025-11-16",
    "count": 1,
@@ -978,7 +943,7 @@
   {
    "date": "2026-05-05",
    "count": 9,
-   "level": 2
+   "level": 1
   },
   {
    "date": "2026-05-06",
@@ -1808,7 +1773,7 @@
   {
    "date": "2026-10-18",
    "count": 9,
-   "level": 2
+   "level": 1
   },
   {
    "date": "2026-10-19",
@@ -1888,7 +1853,7 @@
   {
    "date": "2026-11-03",
    "count": 25,
-   "level": 4
+   "level": 3
   },
   {
    "date": "2026-11-04",
@@ -1898,7 +1863,7 @@
   {
    "date": "2026-11-05",
    "count": 9,
-   "level": 2
+   "level": 1
   },
   {
    "date": "2026-11-06",
@@ -1912,7 +1877,7 @@
   },
   {
    "date": "2026-11-08",
-   "count": 10,
+   "count": 11,
    "level": 2
   },
   {
@@ -1937,13 +1902,18 @@
   },
   {
    "date": "2026-11-13",
-   "count": 12,
-   "level": 2
+   "count": 25,
+   "level": 3
   },
   {
    "date": "2026-11-14",
-   "count": 17,
-   "level": 3
+   "count": 36,
+   "level": 4
+  },
+  {
+   "date": "2026-11-15",
+   "count": 2,
+   "level": 1
   }
  ]
 }
