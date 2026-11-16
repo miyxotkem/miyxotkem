@@ -247,12 +247,19 @@ def activity(data):
     b.append(f'<text class="u"{at(.1)} x="40" y="122" font-family="{SERIF}" font-size="66" letter-spacing="-1" '
              f'fill="{INK}">{s["total"]:,} <tspan font-style="italic">contributions</tspan></text>')
 
-    months = s["monthly"]
-    this_month = datetime.date.today().strftime("%Y-%m")
+    # The last 11 months, then next month as an empty slot still to come.
+    months = s["monthly"][-11:]
+    today = datetime.date.today()
+    this_month = today.strftime("%Y-%m")
+    nxt = (today.replace(day=1) + datetime.timedelta(days=32)).strftime("%Y-%m")
     full = [m["count"] for m in months if m["month"] != this_month] or [1]
     peak = max(full + [1])
     bx, bw, base, top = 44, 520, h - GAP - 44, 160
-    slot = bw / max(len(months), 1)
+    slot = bw / 12
+    nx = bx + len(months)*slot + slot*0.1
+    b.append(f'<text class="i"{at(.8)} x="{nx + slot*0.4:.1f}" y="{base+22}" text-anchor="middle" '
+             f'font-family="{MONO}" font-size="11" fill="{MUTED}" opacity=".55">'
+             f'{datetime.date.fromisoformat(nxt + "-01").strftime("%b")}</text>')
     for i, m in enumerate(months):
         partial = m["month"] == this_month
         bh = max(4, min(1, m["count"] / peak) * (base - top))
