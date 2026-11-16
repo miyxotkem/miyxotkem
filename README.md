@@ -5,7 +5,7 @@
 <img src="./cards/activity.svg" width="100%" alt="Contributions in the last 12 months, by month, with streak and busiest day" /><br>
 <img src="./cards/research.svg" width="33.333%" alt="RESEARCH: UAV detection" /><img src="./cards/build.svg" width="33.333%" alt="BUILD: 2 systems" /><img src="./cards/learn.svg" width="33.333%" alt="LEARN: UIT VNUHCM" /><br>
 <picture><source media="(prefers-color-scheme: dark)" srcset="./cards/title-code-dark.svg" /><img src="./cards/title-code-light.svg" width="100%" alt="When I code" /></picture><br>
-<img src="./cards/hours.svg" width="100%" alt="Contributions by hour of day" />
+<img src="./cards/hours.svg" width="100%" alt="Public contributions by hour of day (private repos not counted)" />
 </div>
 
 <p align="center">

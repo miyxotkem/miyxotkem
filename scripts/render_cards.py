@@ -333,7 +333,7 @@ def hours_card(data):
     b = [card(W, h)]
     tzs = f"UTC{'+' if tz >= 0 else '-'}{abs(tz)}"
     b.append(f'<text class="u" x="44" y="62" font-family="{MONO}" font-size="12" letter-spacing="1.8" '
-             f'fill="{INK_SOFT}">CONTRIBUTIONS BY HOUR OF DAY · {tzs}</text>')
+             f'fill="{INK_SOFT}">PUBLIC CONTRIBUTIONS BY HOUR OF DAY · {tzs}</text>')
 
     groups = {"night": [22, 23, 0, 1, 2, 3, 4], "morning": [5, 6, 7, 8, 9, 10, 11],
               "day": [12, 13, 14, 15, 16, 17], "evening": [18, 19, 20, 21]}
@@ -373,7 +373,7 @@ def hours_card(data):
         (f'{hour_label(peak_h).split()[0]} <tspan font-style="italic">{hour_label(peak_h).split()[1]}</tspan>',
          "my busiest hour"),
         (f'{after6}<tspan fill="{MUTED}">%</tspan>', "of contributions after 6 pm"),
-        (f'{total:,}', "contributions in the last year"),
+        (f'{total:,}', "public contributions, past year"),
     ]
     for i, (big, sub) in enumerate(rows):
         y = 102 + i*97  # number baseline; divider sits midway between rows
@@ -383,8 +383,9 @@ def hours_card(data):
                  f'{escape(sub)}</text></g>')
         if i < 2:
             b.append(f'<rect class="i"{at(.7 + i*.15)} x="{rx}" y="{y+48}" width="196" height="1" fill="{RULE}"/>')
-    label = (f"Contributions by hour of day ({tzs}): {lead} {word}. Busiest hour {hour_label(peak_h)}, "
-             f"{after6}% after 6 pm, {total} contributions in the last year.")
+    label = (f"Public contributions by hour of day ({tzs}): {lead} {word}. Busiest hour {hour_label(peak_h)}, "
+             f"{after6}% after 6 pm, {total} public contributions in the last year. "
+             f"Private repos are not counted.")
     return svg(W, h, "".join(b), ["serif", "serif-i", "sans", "mono"], label)
 
 
@@ -419,7 +420,7 @@ def readme_block(data):
         "".join(img(f"{t[0]}.svg", f"{t[1]}: {t[3]} {t[4]}", third) for t in TILES) + "<br>",
         '<picture><source media="(prefers-color-scheme: dark)" srcset="./cards/title-code-dark.svg" />'
         + img("title-code-light.svg", "When I code") + "</picture><br>",
-        img("hours.svg", "Contributions by hour of day"),
+        img("hours.svg", "Public contributions by hour of day (private repos not counted)"),
         "</div>",
         "",
         '<p align="center">',
