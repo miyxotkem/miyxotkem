@@ -313,7 +313,7 @@ def tile(i, label, key, big, word, blurb):
     return svg(TILE_W, h, "".join(b), ["serif", "serif-i", "sans", "mono"], f"{label}: {big} {word}. {blurb}")
 
 
-# ---- section title + commits-by-hour card ------------------------------------
+# ---- section title + contributions-by-hour card ------------------------------------
 def title(text, italic, dark):
     fill = "#f0f0ee" if dark else INK
     body = (f'<text class="u" x="2" y="46" font-family="{SERIF}" font-size="36" fill="{fill}">{escape(text)} '
@@ -333,14 +333,14 @@ def hours_card(data):
     b = [card(W, h)]
     tzs = f"UTC{'+' if tz >= 0 else '-'}{abs(tz)}"
     b.append(f'<text class="u" x="44" y="62" font-family="{MONO}" font-size="12" letter-spacing="1.8" '
-             f'fill="{INK_SOFT}">COMMITS BY HOUR OF DAY · {tzs}</text>')
+             f'fill="{INK_SOFT}">CONTRIBUTIONS BY HOUR OF DAY · {tzs}</text>')
 
     groups = {"night": [22, 23, 0, 1, 2, 3, 4], "morning": [5, 6, 7, 8, 9, 10, 11],
               "day": [12, 13, 14, 15, 16, 17], "evening": [18, 19, 20, 21]}
     names = {"night": ("Mostly a", "night owl"), "morning": ("Mostly an", "early bird"),
              "day": ("Mostly a", "daytime coder"), "evening": ("Mostly an", "evening coder")}
     top = max(groups, key=lambda g: sum(hours[x] for x in groups[g]))
-    lead, word = names[top] if total else ("Waiting for", "commits")
+    lead, word = names[top] if total else ("Waiting for", "contributions")
     b.append(f'<text class="u"{at(.1)} x="40" y="122" font-family="{SERIF}" font-size="66" letter-spacing="-1" '
              f'fill="{INK}">{lead} <tspan font-style="italic" fill="{ACCENT}">{word}</tspan></text>')
 
@@ -359,7 +359,7 @@ def hours_card(data):
         x = bx + i*slot + slot*0.12
         fill = ACCENT if i == peak_h and c else INK if c else GREY_BAR
         b.append(f'<rect class="b"{at(.35 + i*.035)} x="{x:.1f}" y="{base-bh:.1f}" width="{slot*0.76:.1f}" '
-                 f'height="{bh:.1f}" rx="3" fill="{fill}"><title>{c} commits at {hour_label(i)}</title></rect>')
+                 f'height="{bh:.1f}" rx="3" fill="{fill}"><title>{c} contributions at {hour_label(i)}</title></rect>')
         if i == peak_h and c:
             b.append(f'<text class="i"{at(1.4)} x="{x + slot*0.38:.1f}" y="{base-bh-9:.1f}" text-anchor="middle" '
                      f'font-family="{MONO}" font-size="11.5" fill="{ACCENT}">{c}</text>')
@@ -372,8 +372,8 @@ def hours_card(data):
     rows = [
         (f'{hour_label(peak_h).split()[0]} <tspan font-style="italic">{hour_label(peak_h).split()[1]}</tspan>',
          "my busiest hour"),
-        (f'{after6}<tspan fill="{MUTED}">%</tspan>', "of commits after 6 pm"),
-        (f'{total:,}', "commits in the last year"),
+        (f'{after6}<tspan fill="{MUTED}">%</tspan>', "of contributions after 6 pm"),
+        (f'{total:,}', "contributions in the last year"),
     ]
     for i, (big, sub) in enumerate(rows):
         y = 102 + i*97  # number baseline; divider sits midway between rows
@@ -383,8 +383,8 @@ def hours_card(data):
                  f'{escape(sub)}</text></g>')
         if i < 2:
             b.append(f'<rect class="i"{at(.7 + i*.15)} x="{rx}" y="{y+48}" width="196" height="1" fill="{RULE}"/>')
-    label = (f"Commits by hour of day ({tzs}): {lead} {word}. Busiest hour {hour_label(peak_h)}, "
-             f"{after6}% after 6 pm, {total} commits in the last year.")
+    label = (f"Contributions by hour of day ({tzs}): {lead} {word}. Busiest hour {hour_label(peak_h)}, "
+             f"{after6}% after 6 pm, {total} contributions in the last year.")
     return svg(W, h, "".join(b), ["serif", "serif-i", "sans", "mono"], label)
 
 
@@ -419,7 +419,7 @@ def readme_block(data):
         "".join(img(f"{t[0]}.svg", f"{t[1]}: {t[3]} {t[4]}", third) for t in TILES) + "<br>",
         '<picture><source media="(prefers-color-scheme: dark)" srcset="./cards/title-code-dark.svg" />'
         + img("title-code-light.svg", "When I code") + "</picture><br>",
-        img("hours.svg", "Commits by hour of day"),
+        img("hours.svg", "Contributions by hour of day"),
         "</div>",
         "",
         '<p align="center">',

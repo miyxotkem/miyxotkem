@@ -3,7 +3,8 @@
 Fetch the last year of daily contribution counts for the profile owner and
 write data/contributions.json with the raw days plus derived stats
 (total, current streak, longest streak, busiest day, monthly totals),
-plus your commits from the last year bucketed by local hour of day.
+plus your contributions from the last year (commits, pull requests, issues,
+reviews and new repositories) bucketed by local hour of day.
 
 Uses GitHub's GraphQL API with the token Actions provides (GITHUB_TOKEN).
 Standard library only, so the workflow needs no pip install.
@@ -32,6 +33,9 @@ query($login: String!) {
       contributionCalendar {
         weeks { contributionDays { date contributionCount contributionLevel } }
       }
+      commitContributionsByRepository(maxRepositories: 100) {
+        repository { name owner { login } }
+      }
     }
     repositories(first: 50, ownerAffiliations: OWNER, isFork: false,
                  orderBy: {field: PUSHED_AT, direction: DESC}) {
@@ -50,6 +54,24 @@ query($owner: String!, $name: String!, $uid: ID!, $since: GitTimestamp!, $after:
         nodes { authoredDate }
       }
     } } }
+  }
+}
+"""
+
+# Every non-commit contribution type the calendar counts carries an occurredAt
+# timestamp; commits don't, so those come from each repo's git history instead.
+EVENT_KINDS = ["pullRequestContributions", "issueContributions",
+               "pullRequestReviewContributions", "repositoryContributions"]
+
+EVENTS = """
+query($login: String!, $after: String) {
+  user(login: $login) {
+    contributionsCollection {
+      %s(first: 100, after: $after) {
+        pageInfo { hasNextPage endCursor }
+        nodes { occurredAt }
+      }
+    }
   }
 }
 """
@@ -74,11 +96,14 @@ def gql(token, query, variables):
     return payload["data"]
 
 
-def commit_hours(token, uid, repos):
-    """Count your commits from the last year by local hour of day (0-23)."""
+def local_hour(stamp):
+    t = datetime.datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+    return t.astimezone(datetime.timezone(datetime.timedelta(hours=TZ_OFFSET))).hour
+
+
+def commit_hours(token, uid, repos, hours):
+    """Add your commits from the last year to hours, by local hour of day (0-23)."""
     since = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=365)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    tz = datetime.timezone(datetime.timedelta(hours=TZ_OFFSET))
-    hours = [0] * 24
     for r in repos:
         after = None
         for _ in range(10):  # at most 1,000 commits per repo
@@ -93,11 +118,43 @@ def commit_hours(token, uid, repos):
                 break
             hist = ref["target"]["history"]
             for n in hist["nodes"]:
-                t = datetime.datetime.fromisoformat(n["authoredDate"].replace("Z", "+00:00"))
-                hours[t.astimezone(tz).hour] += 1
+                hours[local_hour(n["authoredDate"])] += 1
             if not hist["pageInfo"]["hasNextPage"]:
                 break
             after = hist["pageInfo"]["endCursor"]
+
+
+def event_hours(token, hours):
+    """Add your pull requests, issues, reviews and new repos to hours."""
+    for kind in EVENT_KINDS:
+        after = None
+        for _ in range(20):  # at most 2,000 of each kind
+            try:
+                data = gql(token, EVENTS % kind, {"login": USERNAME, "after": after})
+            except Exception as e:
+                print(f"skip {kind}: {e}", file=sys.stderr)
+                break
+            page = data["user"]["contributionsCollection"][kind]
+            for n in page["nodes"]:
+                hours[local_hour(n["occurredAt"])] += 1
+            if not page["pageInfo"]["hasNextPage"]:
+                break
+            after = page["pageInfo"]["endCursor"]
+
+
+def contribution_hours(token, user):
+    """Count your contributions from the last year by local hour of day (0-23)."""
+    # Repos you committed to this year (including other people's), plus your own.
+    repos, seen = [], set()
+    by_repo = user["contributionsCollection"]["commitContributionsByRepository"]
+    for r in [x["repository"] for x in by_repo] + user["repositories"]["nodes"]:
+        key = (r["owner"]["login"].lower(), r["name"].lower())
+        if key not in seen:
+            seen.add(key)
+            repos.append(r)
+    hours = [0] * 24
+    commit_hours(token, user["id"], repos, hours)
+    event_hours(token, hours)
     return hours
 
 
@@ -108,7 +165,7 @@ def fetch(token):
         {"date": d["date"], "count": d["contributionCount"], "level": LEVELS.get(d["contributionLevel"], 0)}
         for w in weeks for d in w["contributionDays"]
     ]
-    return days, commit_hours(token, user["id"], user["repositories"]["nodes"])
+    return days, contribution_hours(token, user)
 
 
 # Roughly your real shape (from the old productive-time card), for offline previews.
