@@ -148,7 +148,7 @@ def commit_hours(token, uid, repos, tally, on_commit=None):
             after = hist["pageInfo"]["endCursor"]
 
 
-def event_hours(token, tally, window=None):
+def event_hours(token, tally, window=None, found=None):
     """Add your pull requests, issues, reviews and new repos to hours."""
     for kind in EVENT_KINDS:
         after = None
@@ -161,6 +161,8 @@ def event_hours(token, tally, window=None):
             page = data["user"]["contributionsCollection"][kind]
             for n in page["nodes"]:
                 tally(n["occurredAt"])
+                if found is not None:
+                    found.append((n["occurredAt"], kind))
             if not page["pageInfo"]["hasNextPage"]:
                 break
             after = page["pageInfo"]["endCursor"]
@@ -198,9 +200,19 @@ def contribution_hours(token, user):
     # this month's events come from a query bounded to this month.
     event_hours(token, tally_year)
     fmt = "%Y-%m-%dT%H:%M:%SZ"
+    month_found = []
     event_hours(token, tally_month, {"from": month_start.strftime(fmt),
-                                     "to": datetime.datetime.now(datetime.timezone.utc).strftime(fmt)})
-    return hours, month_hours, extras(user, commits, month_start)
+                                     "to": datetime.datetime.now(datetime.timezone.utc).strftime(fmt)}, month_found)
+    # every contribution this month with its time and type, oldest first (for the waffle)
+    short = {"pullRequestContributions": "pr", "issueContributions": "issue",
+             "pullRequestReviewContributions": "review", "repositoryContributions": "repo"}
+    when = lambda st: datetime.datetime.fromisoformat(st.replace("Z", "+00:00"))
+    events = [(n["authoredDate"], "commit") for _, n in commits if when(n["authoredDate"]) >= month_start]
+    events += [(st, short[k]) for st, k in month_found]
+    events.sort(key=lambda e: when(e[0]))
+    more = extras(user, commits, month_start)
+    more["month_events"] = [[when(st).strftime("%Y-%m-%dT%H:%M:%SZ"), k] for st, k in events]
+    return hours, month_hours, more
 
 
 # ---- words, languages and latest commit (for the words, wrapped and status cards)
