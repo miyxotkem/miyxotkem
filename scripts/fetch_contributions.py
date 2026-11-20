@@ -312,16 +312,23 @@ def contribution_hours(token, user, personal):
         if datetime.datetime.fromisoformat(stamp.replace("Z", "+00:00")) >= month_start:
             month_hours[h] += 1
 
+    by_month = {}  # temporary: timed contributions per month, to compare with the calendar
+
     def tally_year(stamp):
         hours[local_hour(stamp)] += 1
+        m = local_date(stamp)[:7]
+        by_month[m] = by_month.get(m, 0) + 1
 
     def tally_month(stamp):
         month_hours[local_hour(stamp)] += 1
 
     scanned = scan_commits(token, user["id"], repos, since)
     commits = []  # (repo, commit) pairs, for the words and status cards
+    commit_month = {}
     for c in scanned.values():
         tally(c["at"])
+        m = local_date(c["at"])[:7]
+        commit_month[m] = commit_month.get(m, 0) + 1
         commits.append((c["repo"], {"authoredDate": c["at"], "messageHeadline": c["head"]}))
     # commits GitHub's graph leaves out (other branches, forks), by local day
     extra_days = {}
@@ -364,6 +371,7 @@ def contribution_hours(token, user, personal):
                           "repo": None if repo.get("isPrivate", True) else repo.get("name")}
     more["month_events"] = [[when(st).strftime("%Y-%m-%dT%H:%M:%SZ"), k] for st, k in events]
     more["extra_days"] = extra_days
+    more["_debug_month"] = {m: [commit_month.get(m, 0), by_month.get(m, 0)] for m in sorted(set(commit_month) | set(by_month))}
     return hours, month_hours, more
 
 
@@ -460,6 +468,12 @@ def fetch(token, personal=False):
     # GitHub's graph only counts commits on default branches; add the rest
     for d in days:
         d["count"] += more["extra_days"].get(d["date"], 0)
+    cal = {}
+    for d in days:
+        cal[d["date"][:7]] = cal.get(d["date"][:7], 0) + d["count"]
+    for m, (cm, ev) in more.pop("_debug_month").items():
+        print(f"month check {m}: calendar {cal.get(m, 0)}, commits {cm}, other events {ev}, gap {cal.get(m, 0) - cm - ev}",
+              file=sys.stderr)
     return days, hours, month_hours, more
 
 
