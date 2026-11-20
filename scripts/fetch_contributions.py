@@ -211,12 +211,15 @@ STOPWORDS = set("""a an the and or but to of for in on at by with from into onto
 it its this that these those some more less when then than not no yes so up down out off over under
 use using used new old all any each per vs my our your their i we you he she they them me us
 merge merged pull request requests branch main master skip ci wip co authored signed off
+và của các cho được là với khi để một những này có không từ vào ra đã sẽ thì cũng hơn nhiều sau
+trước bằng lại đến như mới trong theo nên rồi thêm bị đó lúc nào gì hay vẫn chỉ đang mà về trên dưới
 """.split())
 
 
 def words_of(headline):
     out = []
-    for w in re.findall(r"[a-zA-Z][a-zA-Z+#.\-]*", headline.lower()):
+    # letters in any script (so Vietnamese words stay whole), plus + # . - inside a word
+    for w in re.findall(r"[^\W\d_][\w+#.\-]*", headline.lower()):
         w = w.strip(".-")
         if len(w) >= 2 and w not in STOPWORDS:
             out.append(w)
