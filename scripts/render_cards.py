@@ -664,7 +664,7 @@ def hours_card(data, monthly=False):
 # ---- words from commit messages --------------------------------------------------
 def words_card(data):
     words = data.get("words") or []
-    h = 250
+    h = 176
     b = [card(W, h)]
     scope = "THIS MONTH" if data.get("words_include_private") else "PUBLIC REPOS · THIS MONTH"
     b.append(f'<text class="u" x="44" y="62" font-family="{MONO}" font-size="12" letter-spacing="1.8" '
@@ -672,20 +672,17 @@ def words_card(data):
     b.append(f'<text class="u" x="{W-44}" y="62" text-anchor="end" font-family="{MONO}" font-size="12" '
              f'letter-spacing="1.8" fill="{MUTED}">{scope}</text>')
     if not words:
-        b.append(f'<text x="44" y="140" font-family="{SERIF}" font-style="italic" font-size="40" fill="{MUTED}">'
+        b.append(f'<text x="44" y="124" font-family="{SERIF}" font-style="italic" font-size="40" fill="{MUTED}">'
                  f'No commits yet this month</text>')
         return svg(W, h, "".join(b), ["serif-i", "mono"], "No commit messages yet this month")
     mx = words[0][1]
-    x, y, line = 44, 130, 0
+    x, y = 44, 124
     shown = []
     for i, (w, n) in enumerate(words):
         fs = 18 + 38 * (n / mx)
         wpx = len(w) * fs * 0.40 + 10 + len(str(n)) * 7
         if x + wpx > W - 44:
-            line += 1
-            x, y = 44, y + 58
-            if line > 1:
-                break
+            continue  # one line only: skip a word that doesn't fit, try the next
         col = ACCENT if i == 0 else INK if n >= max(2, mx * .3) else MUTED
         style = "italic" if i % 3 == 1 else "normal"
         b.append(f'<text class="u"{at(.1 + i*.05)} x="{x:.1f}" y="{y}" font-family="{SERIF}" font-style="{style}" '
