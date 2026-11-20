@@ -270,54 +270,75 @@ def level_of(count, cuts):
     return 5
 
 
+def year_days(data):
+    """This calendar year, 1 January to 31 December: the days so far with their
+    counts, then the days still to come with a count of None."""
+    known = {d["date"]: d["count"] for d in data["days"]}
+    today = datetime.date.fromisoformat(data["days"][-1]["date"])
+    day = datetime.date(today.year, 1, 1)
+    out = []
+    while day.year == today.year:
+        out.append({"date": day.isoformat(), "count": known.get(day.isoformat(), 0) if day <= today else None})
+        day += datetime.timedelta(days=1)
+    return out, today
+
+
 def heatmap(data):
-    days = data["days"]
-    s = data["stats"]
+    days, today = year_days(data)
+    past = [d for d in days if d["count"] is not None]
     h = 356
     b = [card(W, h)]
     b.append(f'<text class="u" x="48" y="72" font-family="{SERIF}" font-size="40" fill="{INK}">Every day, '
              f'<tspan font-style="italic" fill="{ACCENT}">in {ACCENT_WORD}</tspan></text>')
-    b.append(f'<text class="u"{at(.1)} x="{W-48}" y="68" text-anchor="end" font-family="{MONO}" font-size="12" '
-             f'letter-spacing="1.8" fill="{INK_SOFT}">REFRESHED HOURLY</text>')
 
-    nz = sorted(d["count"] for d in days if d["count"])
+    nz = sorted(d["count"] for d in past if d["count"])
     cuts = [nz[int(len(nz) * q)] for q in (.2, .45, .7, .9)] if nz else [1, 2, 3, 4]
 
-    first = datetime.date.fromisoformat(days[0]["date"])
-    off = (first.weekday() + 1) % 7
+    off = (datetime.date(today.year, 1, 1).weekday() + 1) % 7  # rows run Sunday to Saturday
     ncols = (len(days) + off + 6) // 7
     x0, y0 = 48, 96
     step = (W - 96) / ncols
     cell = step * 0.82
-    seen = set()
     for i, d in enumerate(days):
         col, row = divmod(i + off, 7)
         x, y = x0 + col*step, y0 + row*step
+        if d["count"] is None:  # still to come: an outline, so December has its place
+            b.append(f'<rect class="i"{at(.9)} x="{x+.5:.1f}" y="{y+.5:.1f}" width="{cell-1:.1f}" height="{cell-1:.1f}" '
+                     f'rx="3" fill="none" stroke="{EMPTY}" stroke-width="1"/>')
+            continue
         lv = level_of(d["count"], cuts)
         b.append(f'<rect class="d"{at(.25 + col*.018 + row*.012)} x="{x:.1f}" y="{y:.1f}" width="{cell:.1f}" '
                  f'height="{cell:.1f}" rx="3" fill="{SHADES[lv]}"><title>{d["count"]} on {d["date"]}</title></rect>')
-        dt = datetime.date.fromisoformat(d["date"])
-        if dt.day <= 7 and row == 0 and dt.month not in seen and 1 < col and x < W - 48 - 6*14 - 110:
-            seen.add(dt.month)
-            b.append(f'<text class="i"{at(1)} x="{x:.1f}" y="{y0 + 7*step + 18:.1f}" font-family="{MONO}" '
-                     f'font-size="11" fill="{MUTED}">{dt.strftime("%b")}</text>')
-    ly = y0 + 7*step + 18
+    # a month label over the column holding each month's first day
+    for m in range(1, 13):
+        first = datetime.date(today.year, m, 1)
+        col = ((first - datetime.date(today.year, 1, 1)).days + off) // 7
+        b.append(f'<text class="i"{at(1)} x="{x0 + col*step:.1f}" y="{y0 + 7*step + 18:.1f}" font-family="{MONO}" '
+                 f'font-size="11" fill="{ACCENT if m == today.month else MUTED}">{first.strftime("%b")}</text>')
+    # the legend sits top right, in line with the title
     lx = W - 48 - 6*14 - 34
-    b.append(f'<g class="i"{at(1.1)}><text x="{lx-8}" y="{ly:.1f}" text-anchor="end" font-family="{MONO}" '
+    b.append(f'<g class="i"{at(.2)}><text x="{lx-8}" y="68" text-anchor="end" font-family="{MONO}" '
              f'font-size="11" fill="{MUTED}">less</text>')
     for i, c in enumerate(SHADES):
-        b.append(f'<rect x="{lx + i*14}" y="{ly-9:.1f}" width="10" height="10" rx="2" fill="{c}"/>')
-    b.append(f'<text x="{lx + 6*14 + 2}" y="{ly:.1f}" font-family="{MONO}" font-size="11" fill="{MUTED}">more</text></g>')
+        b.append(f'<rect x="{lx + i*14}" y="59" width="10" height="10" rx="2" fill="{c}"/>')
+    b.append(f'<text x="{lx + 6*14 + 2}" y="68" font-family="{MONO}" font-size="11" fill="{MUTED}">more</text></g>')
+
     # the year in four numbers, under the grid
-    best = s["best_day"]
-    best_when = datetime.date.fromisoformat(best["date"]).strftime("%-d %b") if best["date"] else ""
-    lng, cur = s["longest_streak"], s["current_streak"]
-    stats_row = [(f'{s["total"]:,}', "contributions, last 12 months"),
-                 (f'{s["active_days"]}<tspan fill="{MUTED}" font-size="26"> / {len(days)}</tspan>', "days with a contribution"),
+    total = sum(d["count"] for d in past)
+    active = sum(1 for d in past if d["count"])
+    best = max(past, key=lambda d: d["count"])
+    best_when = datetime.date.fromisoformat(best["date"]).strftime("%-d %b")
+    lng = run = 0
+    for d in past:
+        run = run + 1 if d["count"] else 0
+        lng = max(lng, run)
+    cur = data["stats"]["current_streak"]
+    stats_row = [(f'{total:,}', f"contributions in {today.year}"),
+                 (f'{active}<tspan fill="{MUTED}" font-size="26"> / {len(past)}</tspan>', "days with a contribution"),
                  (f'{best["count"]}', f"on the busiest day, {best_when}"),
                  (f'{lng}<tspan font-style="italic" font-size="30"> {"day" if lng == 1 else "days"}</tspan>',
                   "longest streak" + (", still going" if cur and cur >= lng else ""))]
-    ry = ly + 26
+    ry = y0 + 7*step + 44
     b.append(f'<rect class="i"{at(1.1)} x="48" y="{ry:.1f}" width="{W-96}" height="1" fill="{RULE}"/>')
     cw = (W - 96) / 4
     for i, (big, sub) in enumerate(stats_row):
@@ -325,12 +346,10 @@ def heatmap(data):
         b.append(f'<g class="u"{at(1.2 + i*.1)}><text x="{x:.1f}" y="{ry + 52:.1f}" font-family="{SERIF}" font-size="40" '
                  f'letter-spacing="-.5" fill="{INK}">{big}</text><text x="{x+1:.1f}" y="{ry + 74:.1f}" '
                  f'font-family="{SANS}" font-size="13.5" fill="{INK_SOFT}">{escape(sub)}</text></g>')
-    label = (f"Contribution graph for the last 12 months, in {ACCENT_WORD}, refreshed hourly. "
-             f"{s['total']:,} contributions, {s['active_days']} of {len(days)} days with a contribution, "
+    label = (f"Contribution graph for {today.year}, January to December, in {ACCENT_WORD}. "
+             f"{total:,} contributions, {active} of {len(past)} days so far with a contribution, "
              f"{best['count']} on the busiest day ({best_when}), longest streak {lng} days.")
     return svg(W, h, "".join(b), ["serif", "serif-i", "sans", "mono"], label)
-
-
 
 # ---- this month ---------------------------------------------------------------
 MONTH_KINDS = [("commits", "commit", "commits"), ("pull_requests", "pull request", "pull requests"),
@@ -513,24 +532,31 @@ def waffle_card(data):
 # dashed outline for where this month lands at its pace) under the running
 # total as a share of the year, which turns orange where most of the year began.
 def rise_card(data):
-    monthly = data["stats"]["monthly"]
-    counts = [m["count"] for m in monthly]
-    year = sum(counts)
+    # The bars run January to December of this year, with the months to come left
+    # empty. "Usual" and "last month" look back over the 11 months before this
+    # one, so they still mean something in January.
     ref = datetime.date.fromisoformat(data["days"][-1]["date"])
+    counts = [0] * ref.month
+    for d in data["days"]:
+        if d["date"][:4] == str(ref.year):
+            counts[int(d["date"][5:7]) - 1] += d["count"]
+    year = sum(counts) or 1
+    recent = [m["count"] for m in data["stats"]["monthly"][:-1]]
     ndays = calendar.monthrange(ref.year, ref.month)[1]
-    cur, prev = counts[-1], counts[-2]
+    cur, prev = counts[-1], recent[-1]
     pace = round(cur / ref.day * ndays)
-    usual = statistics.median(counts[:-1])
-    record = cur > max(counts[:-1])
-    mname, pname = ref.strftime("%B"), datetime.date.fromisoformat(monthly[-2]["month"] + "-01").strftime("%B")
+    usual = statistics.median(recent) or 1
+    record = cur > max(recent)
+    mname = ref.strftime("%B")
+    pname = datetime.date.fromisoformat(data["stats"]["monthly"][-2]["month"] + "-01").strftime("%B")
     # the turn: the latest month that more than half the year came after
     turn = next(i for i in range(len(counts) - 1, -1, -1) if sum(counts[i:]) >= year * .5)
-    turn_name = datetime.date.fromisoformat(monthly[turn]["month"] + "-01").strftime("%B")
+    turn_name = datetime.date(ref.year, turn + 1, 1).strftime("%B")
     since = round(100 * sum(counts[turn:]) / year)
 
     h = 452
     b = [card(W, h)]
-    b.append(eyebrow(48, 64, "MONTH BY MONTH · AND THE RUNNING TOTAL"))
+    b.append(eyebrow(48, 64, f"{ref.year} MONTH BY MONTH · AND THE RUNNING TOTAL"))
     lead, ital = (f"{mname},", "my biggest yet") if record else (f"{mname} so far,", "climbing")
     b.append(f'<text class="u"{at(.1)} x="40" y="120" font-family="{SERIF}" font-size="56" letter-spacing="-1" '
              f'fill="{INK}">{lead} <tspan font-style="italic" fill="{ACCENT}">{ital}</tspan></text>')
@@ -551,13 +577,18 @@ def rise_card(data):
                      f'<text class="i"{at(1.4)} x="{x - 8:.1f}" y="{Y(pace)+4:.1f}" text-anchor="end" font-family="{MONO}" '
                      f'font-size="11" fill="{MUTED}">~{pace} at this pace</text>')
         b.append(f'<rect class="b"{at(.3 + i*.05)} x="{x:.1f}" y="{base-bh:.1f}" width="{w:.1f}" height="{bh:.1f}" '
-                 f'rx="4" fill="{fill}"><title>{c} in {monthly[i]["month"]}</title></rect>')
+                 f'rx="4" fill="{fill}"><title>{c} in {datetime.date(ref.year, i + 1, 1):%B}</title></rect>')
         if i >= len(counts) - 2:
             b.append(f'<text class="i"{at(1)} x="{x + w/2:.1f}" y="{base-bh+18:.1f}" text-anchor="middle" '
                      f'font-family="{MONO}" font-size="11.5" fill="{PAPER if last else INK}">{c}</text>')
-        mon = datetime.date.fromisoformat(monthly[i]["month"] + "-01").strftime("%b")
+        mon = datetime.date(ref.year, i + 1, 1).strftime("%b")
         b.append(f'<text class="i"{at(.8)} x="{x + w/2:.1f}" y="{base+20}" text-anchor="middle" font-family="{MONO}" '
                  f'font-size="11" fill="{ACCENT if last else MUTED}">{mon}</text>')
+    for i in range(len(counts), 12):  # months still to come: an empty place on the axis
+        x, w = bx + i*slot + slot*.14, slot*.72
+        b.append(f'<rect class="i"{at(.9)} x="{x:.1f}" y="{base-3}" width="{w:.1f}" height="3" rx="1.5" fill="{EMPTY}"/>'
+                 f'<text class="i"{at(.8)} x="{x + w/2:.1f}" y="{base+20}" text-anchor="middle" font-family="{MONO}" '
+                 f'font-size="11" fill="{MUTED}" opacity=".5">{datetime.date(ref.year, i + 1, 1):%b}</text>')
     b.append(f'<path class="i"{at(1.1)} d="M{bx},{Y(usual):.1f} H{bx + turn*slot:.1f}" stroke="{MUTED}" '
              f'stroke-width="1.2" stroke-dasharray="3 4"/><text class="i"{at(1.2)} x="{bx}" y="{Y(usual)-8:.1f}" '
              f'font-family="{MONO}" font-size="10.5" fill="{MUTED}">USUAL MONTH · {usual:g}</text>')
@@ -791,7 +822,7 @@ def readme_block(data):
         f'<a href="{LINK_URL}">{img("hero.svg", f"{FIRST} {LAST}. {EYEBROW.capitalize()}.")}</a><br>',
         "".join(img(f"{t[0]}.svg", f"{t[1]}: {t[3]} {t[4]}", third) for t in TILES) + "<br>",
         # the year: every day, month by month, then the days and hours I keep
-        img("heatmap.svg", f"Contribution graph, in {ACCENT_WORD}, refreshed hourly, with the year's totals") + "<br>",
+        img("heatmap.svg", f"Contribution graph for the year, January to December, in {ACCENT_WORD}, with the year's totals") + "<br>",
         img("rise.svg", "Contributions month by month, with the running total for the year") + "<br>",
         img("week.svg", "When I work: contributions by weekday and hour of day") + "<br>",
         # this month, zooming in: day by day, by type, in words
