@@ -54,7 +54,7 @@ query($owner: String!, $name: String!, $uid: ID!, $since: GitTimestamp!, $after:
     defaultBranchRef { target { ... on Commit {
       history(first: 100, after: $after, since: $since, author: {id: $uid}) {
         pageInfo { hasNextPage endCursor }
-        nodes { authoredDate committedDate }
+        nodes { authoredDate }
       }
     } } }
   }
@@ -67,9 +67,9 @@ EVENT_KINDS = ["pullRequestContributions", "issueContributions",
                "pullRequestReviewContributions", "repositoryContributions"]
 
 EVENTS = """
-query($login: String!, $after: String) {
+query($login: String!, $after: String, $from: DateTime, $to: DateTime) {
   user(login: $login) {
-    contributionsCollection {
+    contributionsCollection(from: $from, to: $to) {
       %s(first: 100, after: $after) {
         pageInfo { hasNextPage endCursor }
         nodes { occurredAt }
@@ -121,7 +121,7 @@ def local_hour(stamp):
     return t.astimezone(datetime.timezone(datetime.timedelta(hours=TZ_OFFSET))).hour
 
 
-def commit_hours(token, uid, repos, tally, seen_commits):
+def commit_hours(token, uid, repos, tally):
     """Add your commits from the last year to hours, by local hour of day (0-23)."""
     since = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=365)).strftime("%Y-%m-%dT%H:%M:%SZ")
     for r in repos:
@@ -138,28 +138,25 @@ def commit_hours(token, uid, repos, tally, seen_commits):
                 break
             hist = ref["target"]["history"]
             for n in hist["nodes"]:
-                tally(n["authoredDate"], n)
-                seen_commits.setdefault((r["owner"]["login"] + "/" + r["name"]).lower(), []).append(n)
+                tally(n["authoredDate"])
             if not hist["pageInfo"]["hasNextPage"]:
                 break
             after = hist["pageInfo"]["endCursor"]
 
 
-def event_hours(token, tally, seen_events=None):
+def event_hours(token, tally, window=None):
     """Add your pull requests, issues, reviews and new repos to hours."""
     for kind in EVENT_KINDS:
         after = None
         for _ in range(20):  # at most 2,000 of each kind
             try:
-                data = gql(token, EVENTS % kind, {"login": USERNAME, "after": after})
+                data = gql(token, EVENTS % kind, {"login": USERNAME, "after": after, **(window or {})})
             except Exception as e:
                 print(f"skip {kind}: {e}", file=sys.stderr)
                 break
             page = data["user"]["contributionsCollection"][kind]
             for n in page["nodes"]:
                 tally(n["occurredAt"])
-                if seen_events is not None:
-                    seen_events.setdefault(kind, []).append(n["occurredAt"])
             if not page["pageInfo"]["hasNextPage"]:
                 break
             after = page["pageInfo"]["endCursor"]
@@ -179,78 +176,26 @@ def contribution_hours(token, user):
     month_start = datetime.datetime.now(datetime.timezone.utc).replace(
         day=1, hour=0, minute=0, second=0, microsecond=0)  # UTC, like the calendar
 
-    def tally(stamp, _=None):  # every contribution counts for the year; this month's also go to month_hours
+    def tally(stamp):  # every commit counts for the year; this month's also go to month_hours
         h = local_hour(stamp)
         hours[h] += 1
         if datetime.datetime.fromisoformat(stamp.replace("Z", "+00:00")) >= month_start:
             month_hours[h] += 1
 
-    seen_commits = {}
-    commit_hours(token, user["id"], repos, tally, seen_commits)
-    seen_events = {}
-    event_hours(token, tally, seen_events)
-    explain_commit_gap(token, month_start, seen_commits)
-    explain_event_gap(token, month_start, seen_events)
+    def tally_year(stamp):
+        hours[local_hour(stamp)] += 1
+
+    def tally_month(stamp):
+        month_hours[local_hour(stamp)] += 1
+
+    commit_hours(token, user["id"], repos, tally)
+    # The default (last-year) event lists can miss the newest few items, so
+    # this month's events come from a query bounded to this month.
+    event_hours(token, tally_year)
+    fmt = "%Y-%m-%dT%H:%M:%SZ"
+    event_hours(token, tally_month, {"from": month_start.strftime(fmt),
+                                     "to": datetime.datetime.now(datetime.timezone.utc).strftime(fmt)})
     return hours, month_hours
-
-
-MONTH_COMMITS = """
-query($login: String!, $from: DateTime!, $to: DateTime!) {
-  user(login: $login) { contributionsCollection(from: $from, to: $to) {
-    commitContributionsByRepository(maxRepositories: 100) {
-      repository { nameWithOwner } contributions { totalCount }
-    }
-  } }
-}
-"""
-
-
-def explain_commit_gap(token, month_start, seen_commits):
-    """Log, per repo (unnamed: this log is public), where GitHub's commit count
-    for this month differs from the commits the by-hour chart found."""
-    try:
-        now = datetime.datetime.now(datetime.timezone.utc)
-        rows = gql(token, MONTH_COMMITS, {"login": USERNAME, "from": month_start.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                                          "to": now.strftime("%Y-%m-%dT%H:%M:%SZ")}
-                   )["user"]["contributionsCollection"]["commitContributionsByRepository"]
-    except Exception as e:
-        print(f"commit gap check skipped: {e}", file=sys.stderr)
-        return
-    when = lambda st: datetime.datetime.fromisoformat(st.replace("Z", "+00:00"))
-    for i, r in enumerate(rows):
-        nodes = seen_commits.get(r["repository"]["nameWithOwner"].lower())
-        gh = r["contributions"]["totalCount"]
-        by_author = sum(1 for n in nodes or [] if when(n["authoredDate"]) >= month_start)
-        by_commit = sum(1 for n in nodes or [] if when(n["committedDate"]) >= month_start)
-        if nodes is None or gh != by_author:
-            print(f"commit gap: repo #{i+1}: github {gh}, chart {by_author} by author date, "
-                  f"{by_commit} by commit date{'' if nodes is not None else ', repo not scanned'}")
-
-
-EVENT_TOTALS = {"pullRequestContributions": "totalPullRequestContributions",
-                "issueContributions": "totalIssueContributions",
-                "pullRequestReviewContributions": "totalPullRequestReviewContributions",
-                "repositoryContributions": "totalRepositoryContributions"}
-
-
-def explain_event_gap(token, month_start, seen_events):
-    """Log where GitHub's totals for this month differ from the events the chart found."""
-    now = datetime.datetime.now(datetime.timezone.utc)
-    q = "query($login: String!, $from: DateTime!, $to: DateTime!) { user(login: $login) { " \
-        "contributionsCollection(from: $from, to: $to) { %s } } }" % " ".join(
-            f"{k}(first: 100) {{ totalCount }} {v}" for k, v in EVENT_TOTALS.items())
-    try:
-        c = gql(token, q, {"login": USERNAME, "from": month_start.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                           "to": now.strftime("%Y-%m-%dT%H:%M:%SZ")})["user"]["contributionsCollection"]
-    except Exception as e:
-        print(f"event gap check skipped: {e}", file=sys.stderr)
-        return
-    when = lambda st: datetime.datetime.fromisoformat(st.replace("Z", "+00:00"))
-    for kind, total in EVENT_TOTALS.items():
-        chart = sum(1 for st in seen_events.get(kind, []) if when(st) >= month_start)
-        allyear = len(seen_events.get(kind, []))
-        print(f"event check: {kind}: total {c[total]}, list in month {c[kind]['totalCount']}, "
-              f"chart {chart} (chart saw {allyear} this year)")
 
 
 def month_bounds():
