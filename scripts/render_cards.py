@@ -48,17 +48,51 @@ FOOTER_LINKS = [("portfolio", "https://thinhphatho.pages.dev/"),
                 ("email", "mailto:hothinhphat06@gmail.com")]
 
 # ---- tokens -----------------------------------------------------------------
-PAPER = "#f5f3ec"      # warm paper
-EMPTY = "#e6e1d6"
-INK = "#141413"
-INK_SOFT = "#3d3a35"
-MUTED = "#75706a"
-RULE = "#ddd7ca"
-GREY_BAR = "#cdc6b8"
-COLORS = {"tech": "#d97757", "studio": "#1f1e1d", "learn": "#e3b04b"}  # orange, ink, mustard
-ACCENT = COLORS["tech"]
+# Two palettes. Every card is drawn once per theme (name.svg, name-dark.svg) and
+# the README picks one with <picture>, which follows the viewer's GitHub theme.
+THEMES = {
+    "light": dict(
+        PAPER="#f5f3ec",       # warm paper
+        EMPTY="#e6e1d6",
+        INK="#141413",
+        INK_SOFT="#3d3a35",
+        MUTED="#75706a",
+        RULE="#ddd7ca",
+        GREY_BAR="#cdc6b8",
+        COLORS={"tech": "#d97757", "studio": "#1f1e1d", "learn": "#e3b04b"},  # orange, ink, mustard
+        TILE_INK={"tech": "#ffffff", "studio": "#ffffff", "learn": "#141413"},
+        REVIEW="#ddd5c7",      # waffle: reviews in sand
+        ISSUE="#9c4428",       # waffle: issues in burnt orange
+        SHADES=["#e6e1d6", "#ecc9b9", "#e5ab92", "#df8f6f", "#d97757", "#a24f33"],  # heatmap, light to dark
+    ),
+    "dark": dict(
+        PAPER="#1c1b19",       # warm charcoal, a step above GitHub's dark page
+        EMPTY="#2c2a26",
+        INK="#f2efe6",
+        INK_SOFT="#c9c3b6",
+        MUTED="#8f897e",
+        RULE="#35322d",
+        GREY_BAR="#4a463f",
+        COLORS={"tech": "#d97757", "studio": "#f0ede4", "learn": "#e3b04b"},  # the ink tile turns to paper
+        TILE_INK={"tech": "#ffffff", "studio": "#141413", "learn": "#141413"},
+        REVIEW="#5c564c",
+        ISSUE="#f2b59a",
+        SHADES=["#2c2a26", "#55332a", "#7f4431", "#ad583b", "#d97757", "#f2a585"],  # dim to bright
+    ),
+}
+THEME = "light"
 ACCENT_WORD = "orange"
-SHADES = [EMPTY, "#ecc9b9", "#e5ab92", "#df8f6f", "#d97757", "#a24f33"]  # heatmap, light to dark
+
+
+def use_theme(name):
+    """Point the module-level colour tokens at one palette."""
+    global THEME, ACCENT, WAFFLE_TYPES
+    THEME = name
+    globals().update(THEMES[name])
+    ACCENT = COLORS["tech"]
+    WAFFLE_TYPES = waffle_types()
+
+
 W = 880
 GAP = 12          # space under each card, baked in so the README stays gapless
 TILE_W = W / 3
@@ -139,11 +173,12 @@ def wrap(text, n):
     return lines + ([cur] if cur else [])
 
 
-def card(w, h, fill=PAPER):
-    return f'<rect width="{w:.3f}" height="{h - GAP}" rx="14" fill="{fill}"/>'
+def card(w, h, fill=None):
+    return f'<rect width="{w:.3f}" height="{h - GAP}" rx="14" fill="{fill or PAPER}"/>'
 
 
-def eyebrow(x, y, text, color=ACCENT, delay=0):
+def eyebrow(x, y, text, color=None, delay=0):
+    color = color or ACCENT
     return (f'<g class="u"{at(delay)}><rect x="{x}" y="{y-9}" width="8" height="8" rx="1.5" fill="{color}"/>'
             f'<text x="{x+18}" y="{y}" font-family="{MONO}" font-size="12" letter-spacing="1.8" fill="{INK_SOFT}">'
             f"{escape(text)}</text></g>")
@@ -375,12 +410,13 @@ def month_card(data):
 # ---- this month, one square per contribution --------------------------------------
 # Commits carry the accent orange; the other kinds use the rest of the brand
 # colours, and new repos are yellow stars so they read by shape too.
-WAFFLE_TYPES = {"commit": ("commit", "commits", ACCENT, "commits"),
-                "pr": ("pull request", "pull requests", INK, "pull_requests"),
-                "review": ("review", "reviews", "#ddd5c7", "reviews"),
-                "issue": ("issue", "issues", "#9c4428", "issues"),
-                "repo": ("new repo", "new repos", COLORS["learn"], "repos"),  # drawn as a star
-                "other": ("other", "other", "none", None)}  # drawn as an outline: time unknown
+def waffle_types():
+    return {"commit": ("commit", "commits", ACCENT, "commits"),
+            "pr": ("pull request", "pull requests", INK, "pull_requests"),
+            "review": ("review", "reviews", REVIEW, "reviews"),
+            "issue": ("issue", "issues", ISSUE, "issues"),
+            "repo": ("new repo", "new repos", COLORS["learn"], "repos"),  # drawn as a star
+            "other": ("other", "other", "none", None)}  # drawn as an outline: time unknown
 
 
 def star(cx, cy, r, fill, extra=""):
@@ -544,7 +580,7 @@ def pace_card(data):
 def tile(i, label, key, big, word, blurb):
     h = 222
     color = COLORS[key]
-    ink = "#ffffff" if key in ("tech", "studio") else INK
+    ink = TILE_INK[key]
     w = TILE_W - 8
     b = [f'<g transform="translate({4 if i else 0} 0)">',
          f'<defs><clipPath id="c{i}"><rect width="{w:.3f}" height="{h-GAP}" rx="14"/></clipPath></defs>',
@@ -732,7 +768,9 @@ def link_svg(text, last):
 # ---- README block -------------------------------------------------------------
 def readme_block(data):
     def img(src, alt, width="100%"):
-        return f'<img src="./cards/{src}" width="{width}" alt="{escape(alt)}" />'
+        dark = src.replace(".svg", "-dark.svg")
+        return (f'<picture><source media="(prefers-color-scheme: dark)" srcset="./cards/{dark}" />'
+                f'<img src="./cards/{src}" width="{width}" alt="{escape(alt)}" /></picture>')
     third = "33.333%"
     lines = [
         "<!-- cards:start (generated by scripts/render_cards.py; edit the script, not this block) -->",
@@ -773,19 +811,26 @@ def main():
     for old in os.listdir(OUT) if os.path.isdir(OUT) else []:
         if old.endswith(".svg"):
             os.remove(os.path.join(OUT, old))
-    write("hero.svg", hero(data))
-    write("heatmap.svg", heatmap(data))
-    write("month.svg", month_card(data))
-    write("waffle.svg", waffle_card(data))
-    write("pace.svg", pace_card(data))
-    for i, t in enumerate(TILES):
-        write(f"{t[0]}.svg", tile(i, *t[1:]))
-    write("hours.svg", hours_card(data))
-    write("words.svg", words_card(data))
+    for theme in THEMES:
+        use_theme(theme)
+        sfx = "" if theme == "light" else f"-{theme}"
+        write(f"hero{sfx}.svg", hero(data))
+        write(f"heatmap{sfx}.svg", heatmap(data))
+        write(f"month{sfx}.svg", month_card(data))
+        write(f"waffle{sfx}.svg", waffle_card(data))
+        write(f"pace{sfx}.svg", pace_card(data))
+        for i, t in enumerate(TILES):
+            write(f"{t[0]}{sfx}.svg", tile(i, *t[1:]))
+        write(f"hours{sfx}.svg", hours_card(data))
+        write(f"words{sfx}.svg", words_card(data))
+    # footer links have a transparent background, so one version serves both themes
+    use_theme("light")
     for i, (t, _) in enumerate(FOOTER_LINKS):
         write(f"link-{t}.svg", link_svg(t, i == len(FOOTER_LINKS) - 1))
     readme_block(data)
 
+
+use_theme("light")
 
 if __name__ == "__main__":
     main()
