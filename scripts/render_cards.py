@@ -373,13 +373,13 @@ def month_card(data):
 
 
 # ---- this month, one square per contribution --------------------------------------
-# Commits are most of the squares, so they get a quiet sand and the rarer kinds
-# carry the brand colours. Checked for colour-blind separation (all pairs).
-WAFFLE_TYPES = {"commit": ("commit", "commits", "#ddd5c7", "commits"),
-                "pr": ("pull request", "pull requests", ACCENT, "pull_requests"),
+# Commits carry the accent orange; the other kinds use the rest of the brand
+# colours. Checked for colour-blind separation (all pairs).
+WAFFLE_TYPES = {"commit": ("commit", "commits", ACCENT, "commits"),
+                "pr": ("pull request", "pull requests", INK, "pull_requests"),
                 "review": ("review", "reviews", COLORS["learn"], "reviews"),
-                "issue": ("issue", "issues", INK, "issues"),
-                "repo": ("new repo", "new repos", "#9c4428", "repos"),
+                "issue": ("issue", "issues", "#9c4428", "issues"),
+                "repo": ("new repo", "new repos", "#ddd5c7", "repos"),
                 "other": ("other", "other", "none", None)}  # drawn as an outline: time unknown
 
 
@@ -622,11 +622,18 @@ def hours_card(data, monthly=False):
                  f'<title>{c} contributions at {hour_label(i)}</title></rect>')
     if hours[peak_h]:
         px, py = pts[peak_h]
+        # dashed drop line from the peak to the axis, with the hour written underneath
+        b.append(f'<path class="i"{at(1.3)} d="M{px:.1f},{py+7:.1f} L{px:.1f},{base}" stroke="{ACCENT}" '
+                 f'stroke-width="1.5" stroke-dasharray="3 3" fill="none"/>')
+        b.append(f'<text class="i"{at(1.4)} x="{px:.1f}" y="{base+22}" text-anchor="middle" font-family="{MONO}" '
+                 f'font-size="11.5" fill="{ACCENT}">{hour_label(peak_h)}</text>')
         b.append(f'<circle class="d"{at(1.4)} cx="{px:.1f}" cy="{py:.1f}" r="6" fill="{ACCENT}" '
                  f'stroke="{PAPER}" stroke-width="2"/>')
         b.append(f'<text class="i"{at(1.5)} x="{px:.1f}" y="{py-14:.1f}" text-anchor="middle" '
                  f'font-family="{MONO}" font-size="11.5" fill="{ACCENT}">{hours[peak_h]}</text>')
     for i in (0, 6, 12, 18, 23):
+        if hours[peak_h] and abs(i - peak_h) < 2:
+            continue  # the peak's own label sits here
         b.append(f'<text class="i"{at(.8)} x="{bx + i*step:.1f}" y="{base+22}" text-anchor="middle" '
                  f'font-family="{MONO}" font-size="11" fill="{MUTED}">{i:02d}</text>')
 
