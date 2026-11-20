@@ -26,6 +26,7 @@ jobs:
       - name: Fetch contribution data
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PROFILE_TOKEN: ${{ secrets.PROFILE_TOKEN }}   # optional: your token, so private repos count too
         run: python scripts/fetch_contributions.py
 
       - name: Render cards

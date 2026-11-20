@@ -11,7 +11,8 @@ reviews and new repositories) bucketed by local hour of day.
 Uses GitHub's GraphQL API with the token Actions provides (GITHUB_TOKEN).
 Standard library only, so the workflow needs no pip install.
 
-    GITHUB_TOKEN=... python scripts/fetch_contributions.py
+    PROFILE_TOKEN=... python scripts/fetch_contributions.py   # sees private repos too
+    GITHUB_TOKEN=... python scripts/fetch_contributions.py    # public repos only
     python scripts/fetch_contributions.py --sample   # offline demo data
 """
 import datetime
@@ -268,7 +269,10 @@ def stats(days):
 
 
 def main():
-    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+    # PROFILE_TOKEN (your own token with repo access) also sees private repos;
+    # the Actions GITHUB_TOKEN only sees public ones.
+    personal = os.environ.get("PROFILE_TOKEN")
+    token = personal or os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
     if "--sample" in sys.argv:
         days, hours, month = sample_days(), SAMPLE_HOURS, sample_month()
     elif token:
@@ -281,6 +285,7 @@ def main():
     out = {"user": USERNAME,
            "updated": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
            "sample": "--sample" in sys.argv,
+           "includes_private": bool(personal) and "--sample" not in sys.argv,
            "tz_offset": TZ_OFFSET, "hours": hours, "month": month,
            "stats": stats(days), "days": days}
     os.makedirs(os.path.dirname(OUT_PATH), exist_ok=True)
