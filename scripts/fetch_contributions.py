@@ -179,9 +179,9 @@ def contribution_hours(token, user):
 
 
 def month_bounds():
-    """(this month, last month) as (YYYY-MM, start, end) in local time."""
-    tz = datetime.timezone(datetime.timedelta(hours=TZ_OFFSET))
-    now = datetime.datetime.now(tz)
+    """(this month, last month) as (YYYY-MM, start, end), in UTC like the
+    contribution calendar, so the breakdown adds up to the calendar's days."""
+    now = datetime.datetime.now(datetime.timezone.utc)
     start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     prev = (start - datetime.timedelta(days=1)).replace(day=1)
     iso = lambda t: t.astimezone(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
