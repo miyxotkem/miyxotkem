@@ -331,13 +331,22 @@ def contribution_hours(token, user, personal):
             extra_days[day] = extra_days.get(day, 0) + 1
     print(f"scanned {len(repos)} repos: {len(scanned)} commits, "
           f"{sum(extra_days.values())} only on other branches or forks", file=sys.stderr)
-    # The default (last-year) event lists can miss the newest few items, so
-    # this month's events come from a query bounded to this month.
-    event_hours(token, tally_year)
+    # The default (last-year) event lists can miss items, so PRs, issues,
+    # reviews and new repos are fetched one calendar month at a time.
     fmt = "%Y-%m-%dT%H:%M:%SZ"
+    now = datetime.datetime.now(datetime.timezone.utc)
+    start = datetime.datetime.fromisoformat(since.replace("Z", "+00:00"))
     month_found = []
-    event_hours(token, tally_month, {"from": month_start.strftime(fmt),
-                                     "to": datetime.datetime.now(datetime.timezone.utc).strftime(fmt)}, month_found)
+    while start < now:
+        nxt = (start.replace(day=1) + datetime.timedelta(days=32)).replace(
+            day=1, hour=0, minute=0, second=0, microsecond=0)
+        end = min(nxt, now)
+        window = {"from": start.strftime(fmt), "to": (end - datetime.timedelta(seconds=1)).strftime(fmt)}
+        if start >= month_start:  # this month: by hour for the month too, and keep each event
+            event_hours(token, lambda st: (tally_year(st), tally_month(st)), window, month_found)
+        else:
+            event_hours(token, tally_year, window)
+        start = end
     # every contribution this month with its time and type, oldest first (for the waffle)
     short = {"pullRequestContributions": "pr", "issueContributions": "issue",
              "pullRequestReviewContributions": "review", "repositoryContributions": "repo"}
