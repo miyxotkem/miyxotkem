@@ -63,7 +63,11 @@ query($owner: String!, $name: String!, $uid: ID!, $since: GitTimestamp!, $after:
     refs(refPrefix: "refs/heads/", first: 50, after: $after,
          orderBy: {field: TAG_COMMIT_DATE, direction: DESC}) {
       pageInfo { hasNextPage endCursor }
-      nodes { name target { ... on Commit {
+      nodes { name
+        associatedPullRequests(states: MERGED, first: 5, orderBy: {field: UPDATED_AT, direction: DESC}) {
+          nodes { mergedAt }
+        }
+        target { ... on Commit {
         committedDate
         history(first: 100, since: $since, author: {id: $uid}) {
           pageInfo { hasNextPage endCursor }
@@ -216,17 +220,28 @@ def find_repos(token, user, personal, since):
 
 
 def scan_commits(token, uid, repos, since):
-    """Your commits from the last year on every branch of every repo, once each
-    (keyed by commit id). A commit is "counted" when GitHub's own graph already
-    includes it: it sits on the default branch or gh-pages of a repo that is
-    not a fork. Everything else (feature branches, forks) is extra."""
-    commits = {}
+    """Your commits from the last year on every branch of every repo, each
+    counted once. Every sighting of a commit on a branch is recorded, then:
 
-    def add(r, nodes, counted):
+      * on a default branch or gh-pages (not a fork): GitHub's own graph has
+        it already ("counted"), so nothing is added;
+      * on any ordinary branch: it is extra and added once;
+      * only on branches whose pull request was merged, and written before the
+        merge: a squash or rebase copy already landed where the PR went, so it
+        is dropped;
+      * finally, copies made by rebasing or cherry-picking (same author time and
+        message, different id) collapse into one, keeping the counted copy.
+    """
+    seen = {}
+
+    def add(r, nodes, kind, merged_at):
         for n in nodes:
-            c = commits.setdefault(n["oid"], {"at": n["authoredDate"], "head": n.get("messageHeadline") or "",
-                                              "repo": r, "counted": False})
-            c["counted"] = c["counted"] or counted
+            c = seen.setdefault(n["oid"], {"at": n["authoredDate"], "head": n.get("messageHeadline") or "",
+                                           "repo": r, "kinds": set()})
+            if kind == "merged-head" and merged_at and n["authoredDate"] > merged_at:
+                c["kinds"].add("plain")  # committed to the branch after its PR merged
+            else:
+                c["kinds"].add(kind)
 
     for r in repos:
         owner, name = r["owner"]["login"], r["name"]
@@ -248,9 +263,16 @@ def scan_commits(token, uid, repos, since):
                     continue
                 if (t.get("committedDate") or "") < since:
                     continue  # nothing on this branch since a year ago
-                counted = not repo["isFork"] and ref["name"] in (default, "gh-pages")
+                merged = [p["mergedAt"] for p in (ref.get("associatedPullRequests") or {}).get("nodes", [])
+                          if p.get("mergedAt")]
+                if not repo["isFork"] and ref["name"] in (default, "gh-pages"):
+                    kind, merged_at = "counted", None
+                elif merged:
+                    kind, merged_at = "merged-head", max(merged)
+                else:
+                    kind, merged_at = "plain", None
                 hist = t["history"]
-                add(r, hist["nodes"], counted)
+                add(r, hist["nodes"], kind, merged_at)
                 cursor = hist["pageInfo"]["endCursor"] if hist["pageInfo"]["hasNextPage"] else None
                 for _ in range(10):  # a long branch: page through the rest
                     if not cursor:
@@ -263,11 +285,38 @@ def scan_commits(token, uid, repos, since):
                     except Exception as e:
                         print(f"skip rest of {name}@{ref['name']}: {e}", file=sys.stderr)
                         break
-                    add(r, h["nodes"], counted)
+                    add(r, h["nodes"], kind, merged_at)
                     cursor = h["pageInfo"]["endCursor"] if h["pageInfo"]["hasNextPage"] else None
             if not repo["refs"]["pageInfo"]["hasNextPage"]:
                 break
             after = repo["refs"]["pageInfo"]["endCursor"]
+
+    # decide each commit from all its sightings
+    commits, dropped_merged = {}, 0
+    for oid, c in seen.items():
+        if "counted" in c["kinds"]:
+            c["counted"] = True
+        elif "plain" in c["kinds"]:
+            c["counted"] = False
+        else:  # only on merged PR branches: its squash/rebase copy is counted elsewhere
+            dropped_merged += 1
+            continue
+        commits[oid] = c
+
+    # rebased or cherry-picked copies: same author time and message, new id
+    groups = {}
+    for oid, c in commits.items():
+        groups.setdefault((c["at"], c["head"]), []).append(oid)
+    dropped_copies = 0
+    for oids in groups.values():
+        if len(oids) > 1:
+            keep = next((o for o in oids if commits[o]["counted"]), oids[0])
+            for o in oids:
+                if o != keep:
+                    del commits[o]
+                    dropped_copies += 1
+    print(f"dropped {dropped_merged} commits from merged PR branches and {dropped_copies} rebased copies",
+          file=sys.stderr)
     return commits
 
 
