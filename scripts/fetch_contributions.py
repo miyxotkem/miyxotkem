@@ -3,6 +3,8 @@
 Fetch the last year of daily contribution counts for the profile owner and
 write data/contributions.json with the raw days plus derived stats
 (total, current streak, longest streak, busiest day, monthly totals),
+this month's commits / pull requests / reviews / issues / new repos (and last
+month's, for comparison),
 plus your contributions from the last year (commits, pull requests, issues,
 reviews and new repositories) bucketed by local hour of day.
 
@@ -75,6 +77,23 @@ query($login: String!, $after: String) {
   }
 }
 """
+
+# Totals by contribution type for one window (used for this month and last).
+MONTH_FIELDS = {"commits": "totalCommitContributions",
+                "pull_requests": "totalPullRequestContributions",
+                "reviews": "totalPullRequestReviewContributions",
+                "issues": "totalIssueContributions",
+                "repos": "totalRepositoryContributions",
+                "private": "restrictedContributionsCount"}
+
+MONTHS = """
+query($login: String!, $f1: DateTime!, $t1: DateTime!, $f0: DateTime!, $t0: DateTime!) {
+  user(login: $login) {
+    now: contributionsCollection(from: $f1, to: $t1) { %s }
+    prev: contributionsCollection(from: $f0, to: $t0) { %s }
+  }
+}
+""" % ((" ".join(MONTH_FIELDS.values()),) * 2)
 
 LEVELS = {"NONE": 0, "FIRST_QUARTILE": 1, "SECOND_QUARTILE": 2,
           "THIRD_QUARTILE": 3, "FOURTH_QUARTILE": 4}
@@ -158,6 +177,35 @@ def contribution_hours(token, user):
     return hours
 
 
+def month_bounds():
+    """(this month, last month) as (YYYY-MM, start, end) in local time."""
+    tz = datetime.timezone(datetime.timedelta(hours=TZ_OFFSET))
+    now = datetime.datetime.now(tz)
+    start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    prev = (start - datetime.timedelta(days=1)).replace(day=1)
+    iso = lambda t: t.astimezone(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return ((start.strftime("%Y-%m"), iso(start), iso(now)),
+            (prev.strftime("%Y-%m"), iso(prev), iso(start - datetime.timedelta(seconds=1))))
+
+
+def month_counts(token):
+    """Commits, PRs, reviews, issues and new repos for this month and last."""
+    (m1, f1, t1), (m0, f0, t0) = month_bounds()
+    try:
+        u = gql(token, MONTHS, {"login": USERNAME, "f1": f1, "t1": t1, "f0": f0, "t0": t0})["user"]
+    except Exception as e:  # the month card falls back to calendar totals
+        print(f"skip month counts: {e}", file=sys.stderr)
+        return None
+    pick = lambda c: {k: c[v] for k, v in MONTH_FIELDS.items()}
+    return {"month": m1, "counts": pick(u["now"]), "prev": {"month": m0, "counts": pick(u["prev"])}}
+
+
+def sample_month():
+    (m1, _, _), (m0, _, _) = month_bounds()
+    return {"month": m1, "counts": {"commits": 212, "pull_requests": 18, "reviews": 9, "issues": 6, "repos": 3, "private": 17},
+            "prev": {"month": m0, "counts": {"commits": 170, "pull_requests": 14, "reviews": 11, "issues": 4, "repos": 2, "private": 12}}}
+
+
 def fetch(token):
     user = gql(token, CALENDAR, {"login": USERNAME})["user"]
     weeks = user["contributionsCollection"]["contributionCalendar"]["weeks"]
@@ -222,9 +270,10 @@ def stats(days):
 def main():
     token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
     if "--sample" in sys.argv:
-        days, hours = sample_days(), SAMPLE_HOURS
+        days, hours, month = sample_days(), SAMPLE_HOURS, sample_month()
     elif token:
         days, hours = fetch(token)
+        month = month_counts(token)
     else:
         sys.exit("GITHUB_TOKEN not set (use --sample for demo data)")
 
@@ -232,7 +281,7 @@ def main():
     out = {"user": USERNAME,
            "updated": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
            "sample": "--sample" in sys.argv,
-           "tz_offset": TZ_OFFSET, "hours": hours,
+           "tz_offset": TZ_OFFSET, "hours": hours, "month": month,
            "stats": stats(days), "days": days}
     os.makedirs(os.path.dirname(OUT_PATH), exist_ok=True)
     with open(OUT_PATH, "w") as f:
