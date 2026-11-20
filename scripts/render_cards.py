@@ -525,6 +525,111 @@ def hours_card(data, monthly=False):
     return svg(W, h, "".join(b), ["serif", "serif-i", "sans", "mono"], label)
 
 
+# ---- status line --------------------------------------------------------------
+def status_card(data):
+    h = 84
+    latest = data.get("latest")
+    b = [card(W, h)]
+    mid = (h - GAP) / 2
+    if latest:
+        tz = datetime.timezone(datetime.timedelta(hours=data.get("tz_offset", 7)))
+        t = datetime.datetime.fromisoformat(latest["at"].replace("Z", "+00:00"))
+        upd = datetime.datetime.strptime(data["updated"], "%Y-%m-%d %H:%M UTC").replace(tzinfo=datetime.timezone.utc)
+        fresh = upd - t < datetime.timedelta(hours=24)
+        lt = t.astimezone(tz)
+        when = f"{lt.strftime('%a %-d %b')}, {lt.strftime('%-I:%M')} {'am' if lt.hour < 12 else 'pm'}"
+        where = latest["repo"] or "a private repo"
+        b.append(f'<circle class="{"beat" if fresh else ""}" cx="62" cy="{mid}" r="6" fill="{"#3fb950" if fresh else GREY_BAR}"/>')
+        b.append(f'<text class="u" x="82" y="{mid+6}" font-family="{SANS}" font-size="17" fill="{INK}">'
+                 f'{"Shipping lately" if fresh else "Last seen"} <tspan fill="{MUTED}">·</tspan> '
+                 f'<tspan fill="{INK_SOFT}">last commit {escape(when)} in </tspan>'
+                 f'<tspan font-family="{MONO}" font-size="14.5" fill="{INK}">{escape(where)}</tspan></text>')
+        label = f"Last commit {when} in {where}."
+    else:
+        b.append(f'<text x="82" y="{mid+6}" font-family="{SANS}" font-size="17" fill="{MUTED}">Waiting for the next refresh</text>')
+        label = "Status"
+    cur = data["stats"]["current_streak"]
+    if cur:
+        b.append(f'<text class="u"{at(.2)} x="{W-44}" y="{mid+5}" text-anchor="end" font-family="{MONO}" font-size="12" '
+                 f'letter-spacing="1.5" fill="{ACCENT}">{cur}-DAY STREAK</text>')
+        label += f" {cur}-day streak."
+    return svg(W, h, "".join(b), ["sans", "mono"], label)
+
+
+# ---- words from commit messages --------------------------------------------------
+def words_card(data):
+    words = data.get("words") or []
+    h = 250
+    b = [card(W, h)]
+    scope = "THIS MONTH" if data.get("words_include_private") else "PUBLIC REPOS · THIS MONTH"
+    b.append(f'<text class="u" x="44" y="62" font-family="{MONO}" font-size="12" letter-spacing="1.8" '
+             f'fill="{INK_SOFT}">WHAT MY COMMIT MESSAGES SAY</text>')
+    b.append(f'<text class="u" x="{W-44}" y="62" text-anchor="end" font-family="{MONO}" font-size="12" '
+             f'letter-spacing="1.8" fill="{MUTED}">{scope}</text>')
+    if not words:
+        b.append(f'<text x="44" y="140" font-family="{SERIF}" font-style="italic" font-size="40" fill="{MUTED}">'
+                 f'No commits yet this month</text>')
+        return svg(W, h, "".join(b), ["serif-i", "mono"], "No commit messages yet this month")
+    mx = words[0][1]
+    x, y, line = 44, 130, 0
+    shown = []
+    for i, (w, n) in enumerate(words):
+        fs = 18 + 38 * (n / mx)
+        wpx = len(w) * fs * 0.44 + 10 + len(str(n)) * 7
+        if x + wpx > W - 44:
+            line += 1
+            x, y = 44, y + 58
+            if line > 1:
+                break
+        col = ACCENT if i == 0 else INK if n >= max(2, mx * .3) else MUTED
+        style = "italic" if i % 3 == 1 else "normal"
+        b.append(f'<text class="u"{at(.1 + i*.05)} x="{x:.1f}" y="{y}" font-family="{SERIF}" font-style="{style}" '
+                 f'font-size="{fs:.0f}" fill="{col}">{escape(w)}<tspan font-family="{MONO}" font-size="11" '
+                 f'fill="{MUTED}" dy="-{fs*.45:.0f}"> {n}</tspan></text>')
+        shown.append(f"{w} ({n})")
+        x += wpx + 24
+    return svg(W, h, "".join(b), ["serif", "serif-i", "mono"],
+               "Most used words in this month's commit messages: " + ", ".join(shown))
+
+
+# ---- wrapped ------------------------------------------------------------------
+def wrapped_card(data):
+    s = data["stats"]
+    hours = data["hours"]
+    h = 412
+    b = [card(W, h, INK)]
+    b.append(f'<text class="u" x="44" y="62" font-family="{MONO}" font-size="12" letter-spacing="1.8" '
+             f'fill="{GREY_BAR}">MY YEAR ON GITHUB, WRAPPED</text>')
+    b.append(f'<text class="u" x="{W-44}" y="62" text-anchor="end" font-family="{MONO}" font-size="12" '
+             f'letter-spacing="1.8" fill="{MUTED}">LAST 12 MONTHS</text>')
+    b.append(f'<text class="u"{at(.1)} x="38" y="156" font-family="{SERIF}" font-size="104" letter-spacing="-2" '
+             f'fill="{PAPER}">{s["total"]:,}</text>')
+    b.append(f'<text class="u"{at(.2)} x="44" y="196" font-family="{SERIF}" font-style="italic" font-size="40" '
+             f'fill="{ACCENT}">contributions</text>')
+    peak_h = max(range(24), key=lambda x: hours[x])
+    best = s["best_day"]
+    langs = data.get("languages") or []
+    tiles = [(hour_label(peak_h), "busiest hour"),
+             (datetime.date.fromisoformat(best["date"]).strftime("%-d %b") if best["date"] else "–",
+              f'best day · {best["count"]}'),
+             (f'{s["longest_streak"]}d', "longest streak"),
+             (langs[0][0] if langs else "–", "top language")]
+    fills = [ACCENT, COLORS["learn"], "#3d3a35", "#a24f33"]
+    cw = (W - 88 + 12) / 4  # 12px gutters, flush with both margins
+    for i, (big, sub) in enumerate(tiles):
+        x = 44 + i*cw
+        ink = INK if i == 1 else "#ffffff"
+        fs = 44 if len(big) <= 7 else 34
+        b.append(f'<g class="drop"{at(.4 + i*.15)}><rect x="{x:.1f}" y="232" width="{cw-12:.1f}" height="128" rx="12" '
+                 f'fill="{fills[i]}"/><text x="{x+18:.1f}" y="306" font-family="{SERIF}" font-size="{fs}" '
+                 f'fill="{ink}">{escape(big)}</text><text x="{x+18:.1f}" y="338" font-family="{SANS}" font-size="14" '
+                 f'fill="{ink}" opacity=".85">{escape(sub)}</text></g>')
+    label = (f'My last 12 months on GitHub: {s["total"]:,} contributions. Busiest hour {tiles[0][0]}, '
+             f'best day {tiles[1][0]} with {best["count"]}, longest streak {s["longest_streak"]} days, '
+             f'top language {tiles[3][0]}.')
+    return svg(W, h, "".join(b), ["serif", "serif-i", "sans", "mono"], label)
+
+
 # ---- footer links -------------------------------------------------------------
 # GitHub strips CSS from READMEs, so the links are drawn as small images in the
 # accent colour (transparent background: works on light and dark GitHub alike).
@@ -551,11 +656,14 @@ def readme_block(data):
         "<!-- cards:start (generated by scripts/render_cards.py; edit the script, not this block) -->",
         '<div align="center">',
         f'<a href="{LINK_URL}">{img("hero.svg", f"{FIRST} {LAST}. {EYEBROW.capitalize()}.")}</a><br>',
+        img("status.svg", "Latest commit and current streak") + "<br>",
         img("heatmap.svg", f"Contribution graph, in {ACCENT_WORD}, refreshed daily") + "<br>",
         img("activity.svg", "Contributions in the last 12 months, by month, with streak and busiest day") + "<br>",
         img("month.svg", "This month: contributions by day, plus commits, pull requests, reviews, issues and new repos") + "<br>",
         img("hours.svg", "Contributions by hour of day" if data.get("includes_private")
             else "Public contributions by hour of day (private repos not counted)") + "<br>",
+        img("words.svg", "Most used words in this month's commit messages") + "<br>",
+        img("wrapped.svg", "My last 12 months on GitHub, wrapped") + "<br>",
         "".join(img(f"{t[0]}.svg", f"{t[1]}: {t[3]} {t[4]}", third) for t in TILES),
         "</div>",
         "",
@@ -588,6 +696,9 @@ def main():
     for i, t in enumerate(TILES):
         write(f"{t[0]}.svg", tile(i, *t[1:]))
     write("hours.svg", hours_card(data))
+    write("status.svg", status_card(data))
+    write("words.svg", words_card(data))
+    write("wrapped.svg", wrapped_card(data))
     for i, (t, _) in enumerate(FOOTER_LINKS):
         write(f"link-{t}.svg", link_svg(t, i == len(FOOTER_LINKS) - 1))
     readme_block(data)
