@@ -16,10 +16,12 @@ the ASCII picture comes from data/portrait.txt (make_ascii.py).
     python scripts/render_cards.py
 """
 import base64
+import calendar
 import datetime
 import json
 import os
 import re
+import statistics
 from html import escape
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
@@ -506,74 +508,103 @@ def waffle_card(data):
     return svg(W, h, "".join(b), ["serif", "serif-i", "sans", "mono"], label)
 
 
-# ---- this month vs last month, as running totals ----------------------------------
-def pace_card(data):
-    days = data["days"]
-    ref = datetime.date.fromisoformat(days[-1]["date"])
-    ym = ref.strftime("%Y-%m")
-    pm_date = ref.replace(day=1) - datetime.timedelta(days=1)
-    pm = pm_date.strftime("%Y-%m")
-    run = lambda xs: [sum(xs[:i+1]) for i in range(len(xs))]
-    cur = run([d["count"] for d in days if d["date"].startswith(ym)])
-    prv = run([d["count"] for d in days if d["date"].startswith(pm)])
-    h = 376
+# ---- the rise: month by month, with the running total -------------------------
+# Monthly bars (the quiet months grey, the months since the turn in orange, a
+# dashed outline for where this month lands at its pace) under the running
+# total as a share of the year, which turns orange where most of the year began.
+def rise_card(data):
+    monthly = data["stats"]["monthly"]
+    counts = [m["count"] for m in monthly]
+    year = sum(counts)
+    ref = datetime.date.fromisoformat(data["days"][-1]["date"])
+    ndays = calendar.monthrange(ref.year, ref.month)[1]
+    cur, prev = counts[-1], counts[-2]
+    pace = round(cur / ref.day * ndays)
+    usual = statistics.median(counts[:-1])
+    record = cur > max(counts[:-1])
+    mname, pname = ref.strftime("%B"), datetime.date.fromisoformat(monthly[-2]["month"] + "-01").strftime("%B")
+    # the turn: the latest month that more than half the year came after
+    turn = next(i for i in range(len(counts) - 1, -1, -1) if sum(counts[i:]) >= year * .5)
+    turn_name = datetime.date.fromisoformat(monthly[turn]["month"] + "-01").strftime("%B")
+    since = round(100 * sum(counts[turn:]) / year)
+
+    h = 452
     b = [card(W, h)]
-    b.append(f'<text class="u" x="44" y="62" font-family="{MONO}" font-size="12" letter-spacing="1.8" '
-             f'fill="{INK_SOFT}">THIS MONTH VS LAST MONTH, DAY BY DAY</text>')
-    if not cur or not prv:
-        return svg(W, h, "".join(b), ["mono"], "This month vs last month")
-    n = len(cur)
-    ahead = cur[-1] - prv[min(n, len(prv)) - 1]
-    pname, cname = pm_date.strftime("%B"), ref.strftime("%b")
-    word = "ahead of" if ahead >= 0 else "behind"
-    b.append(f'<text class="u"{at(.1)} x="40" y="122" font-family="{SERIF}" font-size="60" letter-spacing="-1" '
-             f'fill="{INK}">{abs(ahead):,} <tspan font-style="italic" fill="{ACCENT}">{word}</tspan> {pname}</text>')
-    bx, bw, base, top = 96, 500, h - GAP - 52, 160
-    mx = max(prv[-1], cur[-1], 1)
-    # y axis: a round step so there are 3-5 gridlines, labelled on the left
-    step = next(st for st in (1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 5000)
-                if mx / st <= 4)
-    top_v = -(-mx // step) * step
-    X = lambda i: bx + i*bw/30
-    Y = lambda v: base - v/top_v*(base-top)
-    line = lambda v: "M" + " L".join(f"{X(i):.1f},{Y(c):.1f}" for i, c in enumerate(v))
-    for v in range(0, top_v + 1, step):
-        b.append(f'<rect class="i"{at(.2)} x="{bx}" y="{Y(v):.1f}" width="{bw}" height="1" fill="{RULE}" '
-                 f'opacity="{1 if v == 0 else .6}"/><text class="i"{at(.2)} x="{bx-10}" y="{Y(v)+4:.1f}" '
-                 f'text-anchor="end" font-family="{MONO}" font-size="11" fill="{MUTED}">{v:,}</text>')
-    b.append(f'<text class="i"{at(.2)} transform="translate(50 {(top+base)/2:.0f}) rotate(-90)" text-anchor="middle" '
-             f'font-family="{MONO}" font-size="10" letter-spacing="1.5" fill="{MUTED}">RUNNING TOTAL</text>')
-    b.append(f'<text class="i"{at(.2)} x="{bx + bw/2:.0f}" y="{base+40}" text-anchor="middle" font-family="{MONO}" '
-             f'font-size="10" letter-spacing="1.5" fill="{MUTED}">DAY OF THE MONTH</text>')
-    # dashed, so it fades in rather than drawing (the draw animation needs a solid stroke)
-    b.append(f'<path class="i"{at(.2)} d="{line(prv)}" fill="none" stroke="{MUTED}" '
-             f'stroke-width="2" stroke-dasharray="5 4" opacity=".7"/>')
-    b.append(f'<path class="draw"{at(.5)} pathLength="1" d="{line(cur)}" fill="none" stroke="{ACCENT}" '
-             f'stroke-width="2.5" stroke-linejoin="round"/>')
-    x, y = X(n-1), Y(cur[-1])
-    b.append(f'<circle class="d"{at(1.5)} cx="{x:.1f}" cy="{y:.1f}" r="6" fill="{ACCENT}" stroke="{PAPER}" stroke-width="2"/>'
-             f'<text class="i"{at(1.6)} x="{x-10:.1f}" y="{y-12:.1f}" text-anchor="end" font-family="{MONO}" '
-             f'font-size="11.5" fill="{ACCENT}">{cname} · {cur[-1]:,}</text>')
-    xp, yp = X(len(prv)-1), Y(prv[-1])
-    b.append(f'<text class="i"{at(1)} x="{xp:.1f}" y="{yp-10:.1f}" text-anchor="end" font-family="{MONO}" '
-             f'font-size="11.5" fill="{MUTED}">{pm_date.strftime("%b")} · {prv[-1]:,}</text>')
-    for dd in (1, 10, 20, 31):
-        b.append(f'<text class="i"{at(.8)} x="{X(dd-1):.1f}" y="{base+22}" text-anchor="middle" '
-                 f'font-family="{MONO}" font-size="11" fill="{MUTED}">{dd}</text>')
-    by_now = prv[min(n, len(prv)) - 1]
-    rows = [(f'{cur[-1]:,}', f"by day {n} this month"), (f'{by_now:,}', f"by day {n} last month"),
-            (f'{cur[-1]/n:.1f}', "a day on average")]
-    rx = 640
+    b.append(eyebrow(48, 64, "MONTH BY MONTH · AND THE RUNNING TOTAL"))
+    lead, ital = (f"{mname},", "my biggest yet") if record else (f"{mname} so far,", "climbing")
+    b.append(f'<text class="u"{at(.1)} x="40" y="120" font-family="{SERIF}" font-size="56" letter-spacing="-1" '
+             f'fill="{INK}">{lead} <tspan font-style="italic" fill="{ACCENT}">{ital}</tspan></text>')
+
+    bx, bw, base, top = 44, 552, h - GAP - 48, 176
+    slot = bw / 12
+    peak = max(pace, cur, *counts)
+    Y = lambda v: base - v / peak * (base - top) * .6  # bars keep to the lower part; the line rises above them
+    b.append(f'<rect x="{bx}" y="{base}" width="{bw}" height="1" fill="{RULE}"/>')
+    for i, c in enumerate(counts):
+        x, w = bx + i*slot + slot*.14, slot*.72
+        last = i == len(counts) - 1
+        fill = ACCENT if last else SHADES[2] if i >= turn else GREY_BAR
+        bh = max(3, base - Y(c))
+        if last and pace > cur:  # where the month lands at this pace
+            b.append(f'<rect class="i"{at(1.2)} x="{x:.1f}" y="{Y(pace):.1f}" width="{w:.1f}" height="{base-Y(pace):.1f}" '
+                     f'rx="4" fill="none" stroke="{ACCENT}" stroke-width="1.5" stroke-dasharray="4 3"/>'
+                     f'<text class="i"{at(1.4)} x="{x - 8:.1f}" y="{Y(pace)+4:.1f}" text-anchor="end" font-family="{MONO}" '
+                     f'font-size="11" fill="{MUTED}">~{pace} at this pace</text>')
+        b.append(f'<rect class="b"{at(.3 + i*.05)} x="{x:.1f}" y="{base-bh:.1f}" width="{w:.1f}" height="{bh:.1f}" '
+                 f'rx="4" fill="{fill}"><title>{c} in {monthly[i]["month"]}</title></rect>')
+        if i >= len(counts) - 2:
+            b.append(f'<text class="i"{at(1)} x="{x + w/2:.1f}" y="{base-bh+18:.1f}" text-anchor="middle" '
+                     f'font-family="{MONO}" font-size="11.5" fill="{PAPER if last else INK}">{c}</text>')
+        mon = datetime.date.fromisoformat(monthly[i]["month"] + "-01").strftime("%b")
+        b.append(f'<text class="i"{at(.8)} x="{x + w/2:.1f}" y="{base+20}" text-anchor="middle" font-family="{MONO}" '
+                 f'font-size="11" fill="{ACCENT if last else MUTED}">{mon}</text>')
+    b.append(f'<path class="i"{at(1.1)} d="M{bx},{Y(usual):.1f} H{bx + turn*slot:.1f}" stroke="{MUTED}" '
+             f'stroke-width="1.2" stroke-dasharray="3 4"/><text class="i"{at(1.2)} x="{bx}" y="{Y(usual)-8:.1f}" '
+             f'font-family="{MONO}" font-size="10.5" fill="{MUTED}">USUAL MONTH · {usual:g}</text>')
+
+    # the running total, as a share of the year, on its own 0-100% scale: a point at the end of each month
+    ltop = top
+    L = lambda share: base - share * (base - ltop)
+    run, pts = 0, [(bx, base)]
+    for i, c in enumerate(counts):
+        run += c
+        pts.append((bx + (i + 1)*slot, L(run / year)))
+    fmt = lambda ps: " ".join(f"{x:.1f},{y:.1f}" for x, y in ps)
+    quiet, climb = pts[:turn + 1], pts[turn:]
+    b.append(f'<defs><linearGradient id="rg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{ACCENT}" '
+             f'stop-opacity=".30"/><stop offset="1" stop-color="{ACCENT}" stop-opacity="0"/></linearGradient></defs>')
+    b.append(f'<polygon class="i"{at(2.2)} points="{climb[0][0]:.1f},{base} {fmt(climb)} {climb[-1][0]:.1f},{base}" '
+             f'fill="url(#rg)"/>')
+    b.append(f'<polyline class="draw"{at(1.3)} pathLength="1" points="{fmt(quiet)}" fill="none" stroke="{INK}" '
+             f'stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>')
+    b.append(f'<polyline class="draw"{at(2.0)} pathLength="1" points="{fmt(climb)}" fill="none" stroke="{ACCENT}" '
+             f'stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>')
+    tx, ty = pts[turn]
+    before = round(100 * sum(counts[:turn]) / year)
+    for (x, y), txt, anchor, dx, dy in (((tx, ty), f"{before}% by 1 {turn_name[:3]}", "end", -10, -8),
+                                        (pts[-1], "100%", "end", -10, -6)):
+        b.append(f'<circle class="d"{at(2.4)} cx="{x:.1f}" cy="{y:.1f}" r="5" fill="{ACCENT}" stroke="{PAPER}" '
+                 f'stroke-width="2"/><text class="i"{at(2.5)} x="{x+dx:.1f}" y="{y+dy:.1f}" text-anchor="{anchor}" '
+                 f'font-family="{MONO}" font-size="11" fill="{ACCENT}">{txt}</text>')
+    # a tiny key for the line
+    b.append(f'<g class="i"{at(2.5)}><path d="M{bx},{ltop - 18} h9" stroke="{INK}" stroke-width="2"/><path d="M{bx + 9},{ltop - 18} h9" stroke="{ACCENT}" stroke-width="2.5"/>'
+             f'<text x="{bx + 24}" y="{ltop - 14}" font-family="{MONO}" font-size="10.5" fill="{MUTED}">'
+             f'RUNNING TOTAL</text></g>')
+
+    rows = [(f'{cur/usual:.0f}<tspan font-style="italic" fill="{ACCENT}">×</tspan>', f"my usual month ({usual:g})"),
+            (f'{since}<tspan fill="{ACCENT}">%</tspan>', f"of my year came since 1 {turn_name}"),
+            (f'<tspan fill="{ACCENT}">+</tspan>{round(100*(cur-prev)/prev)}<tspan fill="{ACCENT}">%</tspan>', f"on all of {pname}, already")]
     for i, (big, sub) in enumerate(rows):
-        yy = 102 + i*97
-        b.append(f'<g class="u"{at(.5 + i*.15)}><text x="{rx}" y="{yy}" font-family="{SERIF}" font-size="44" '
-                 f'letter-spacing="-.5" fill="{INK}">{big}</text><text x="{rx+1}" y="{yy+25}" font-family="{SANS}" '
+        y = 124 + i*118
+        b.append(f'<g class="u"{at(.5 + i*.15)}><text x="640" y="{y}" font-family="{SERIF}" font-size="44" '
+                 f'letter-spacing="-.5" fill="{INK}">{big}</text><text x="641" y="{y+25}" font-family="{SANS}" '
                  f'font-size="14.5" fill="{INK_SOFT}">{escape(sub)}</text></g>')
         if i < 2:
-            b.append(f'<rect class="i"{at(.7 + i*.15)} x="{rx}" y="{yy+48}" width="196" height="1" fill="{RULE}"/>')
-    label = (f"{abs(ahead)} contributions {word} {pname}: {cur[-1]} by day {n} this month, "
-             f"{by_now} by day {n} last month, which ended at {prv[-1]}.")
+            b.append(f'<rect class="i"{at(.7 + i*.15)} x="640" y="{y+60}" width="196" height="1" fill="{RULE}"/>')
+    label = (f"Contributions by month, with the running total. {mname}: {cur} so far, {cur/usual:.0f} times my usual "
+             f"month of {usual:g}; {since}% of the past year came since 1 {turn_name}.")
     return svg(W, h, "".join(b), ["serif", "serif-i", "sans", "mono"], label)
+
 
 
 # ---- tiles ------------------------------------------------------------------
@@ -639,11 +670,14 @@ def week_card(data):
     # the headline: weekdays or weekends (per day, so 5 vs 2 is fair), and the busiest part of the day
     wk, we = sum(sum(r) for r in grid[:5]), sum(sum(r) for r in grid[5:])
     part = max(PARTS, key=lambda p: sum(r[x] for r in grid for x in PARTS[p]) / len(PARTS[p]))  # per hour
-    if wk / 5 >= we / 2:
-        days_word = "weeknight" if part in ("evenings", "late nights") else "weekday"
-    else:
-        days_word = "weekend"
-    phrase = f"{days_word} {part}" if total else "contributions"
+    lean = (we / 2) / (wk / 5) if wk else 9  # per weekend day vs per weekday
+    if lean > 1.2:
+        phrase = f"weekend {part}"
+    elif lean < 1 / 1.2:
+        phrase = f"{'weeknight' if part in ('evenings', 'late nights') else 'weekday'} {part}"
+    else:  # close enough that neither side owns it
+        phrase = f"{part}, all week"
+    phrase = phrase if total else "contributions"
     lead = "Mostly" if total else "Waiting for"
     fs = min(60, 560 / (len(f"{lead} {phrase}") * 0.37))
     b.append(f'<text class="u"{at(.1)} x="40" y="122" font-family="{SERIF}" font-size="{fs:.0f}" letter-spacing="-1" '
@@ -756,13 +790,13 @@ def readme_block(data):
         # who I am: intro and status, then what I work on
         f'<a href="{LINK_URL}">{img("hero.svg", f"{FIRST} {LAST}. {EYEBROW.capitalize()}.")}</a><br>',
         "".join(img(f"{t[0]}.svg", f"{t[1]}: {t[3]} {t[4]}", third) for t in TILES) + "<br>",
-        # the year: every day, then the days and hours I keep
+        # the year: every day, month by month, then the days and hours I keep
         img("heatmap.svg", f"Contribution graph, in {ACCENT_WORD}, refreshed hourly, with the year's totals") + "<br>",
+        img("rise.svg", "Contributions month by month, with the running total for the year") + "<br>",
         img("week.svg", "When I work: contributions by weekday and hour of day") + "<br>",
-        # this month, zooming in: total, by type, against last month, in words
+        # this month, zooming in: day by day, by type, in words
         img("month.svg", "This month: contributions by day") + "<br>",
         img("waffle.svg", "This month, one square per contribution, coloured by type, in order") + "<br>",
-        img("pace.svg", "This month vs last month, as running totals") + "<br>",
         img("words.svg", "Most used words in this month's commit messages"),
         "</div>",
         "",
@@ -795,7 +829,7 @@ def main():
         write(f"heatmap{sfx}.svg", heatmap(data))
         write(f"month{sfx}.svg", month_card(data))
         write(f"waffle{sfx}.svg", waffle_card(data))
-        write(f"pace{sfx}.svg", pace_card(data))
+        write(f"rise{sfx}.svg", rise_card(data))
         for i, t in enumerate(TILES):
             write(f"{t[0]}{sfx}.svg", tile(i, *t[1:]))
         write(f"week{sfx}.svg", week_card(data))
