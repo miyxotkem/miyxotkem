@@ -274,64 +274,6 @@ def heatmap(data):
                f"Contribution graph for the last 12 months, in {ACCENT_WORD}, refreshed daily")
 
 
-# ---- activity ---------------------------------------------------------------
-def activity(data):
-    s = data["stats"]
-    h = 352
-    b = [card(W, h)]
-    b.append(f'<text class="u" x="44" y="62" font-family="{MONO}" font-size="12" letter-spacing="1.8" '
-             f'fill="{INK_SOFT}">THE LAST 12 MONTHS ON GITHUB</text>')
-    b.append(f'<text class="u"{at(.1)} x="40" y="122" font-family="{SERIF}" font-size="66" letter-spacing="-1" '
-             f'fill="{INK}">{s["total"]:,} <tspan font-style="italic">contributions</tspan></text>')
-
-    # The last 11 months, then next month as an empty slot still to come.
-    months = s["monthly"][-11:]
-    today = datetime.date.today()
-    this_month = today.strftime("%Y-%m")
-    nxt = (today.replace(day=1) + datetime.timedelta(days=32)).strftime("%Y-%m")
-    peak = max([m["count"] for m in months] + [1])  # the month so far counts too, once it leads
-    bx, bw, base, top = 44, 520, h - GAP - 44, 160
-    slot = bw / 12
-    nx = bx + len(months)*slot + slot*0.1
-    b.append(f'<text class="i"{at(.8)} x="{nx + slot*0.4:.1f}" y="{base+22}" text-anchor="middle" '
-             f'font-family="{MONO}" font-size="11" fill="{MUTED}" opacity=".55">'
-             f'{datetime.date.fromisoformat(nxt + "-01").strftime("%b")}</text>')
-    for i, m in enumerate(months):
-        partial = m["month"] == this_month
-        bh = max(4, m["count"] / peak * (base - top))
-        x = bx + i*slot + slot*0.1
-        fill = ACCENT if m["count"] == peak else GREY_BAR if partial else INK
-        b.append(f'<rect class="b"{at(.4 + i*.06)} x="{x:.1f}" y="{base-bh:.1f}" width="{slot*0.8:.1f}" '
-                 f'height="{bh:.1f}" rx="4" fill="{fill}"><title>{m["count"]} in {m["month"]}</title></rect>')
-        mon = datetime.date.fromisoformat(m["month"] + "-01").strftime("%b")
-        b.append(f'<text class="i"{at(.8)} x="{x + slot*0.4:.1f}" y="{base+22}" text-anchor="middle" '
-                 f'font-family="{MONO}" font-size="11" fill="{MUTED}">{mon}</text>')
-        if fill == ACCENT:
-            b.append(f'<text class="i"{at(1.3)} x="{x + slot*0.4:.1f}" y="{base-bh-9:.1f}" text-anchor="middle" '
-                     f'font-family="{MONO}" font-size="11.5" fill="{ACCENT}">{m["count"]:,}</text>')
-
-    # right column: three numbers with rules between them
-    rx = 640
-    cur, lng = s["current_streak"], s["longest_streak"]
-    streak_sub = "current streak, and the longest" if cur and cur >= lng else f"current streak · longest {lng}"
-    best = s["best_day"]
-    rows = [
-        (f'{cur} <tspan font-style="italic">{"day" if cur == 1 else "days"}</tspan>', streak_sub),
-        (f'{s["active_days"]} <tspan fill="{MUTED}">/ {len(data["days"])}</tspan>', "days with a commit"),
-        (f'{best["count"]}', "on the busiest day"),
-    ]
-    for i, (big, sub) in enumerate(rows):
-        y = 102 + i*97  # number baseline; divider sits midway between rows
-        b.append(f'<g class="u"{at(.5 + i*.15)}><text x="{rx}" y="{y}" font-family="{SERIF}" font-size="44" '
-                 f'letter-spacing="-.5" fill="{INK}">{big}</text>'
-                 f'<text x="{rx+1}" y="{y+25}" font-family="{SANS}" font-size="14.5" fill="{INK_SOFT}">'
-                 f'{escape(sub)}</text></g>')
-        if i < 2:
-            b.append(f'<rect class="i"{at(.7 + i*.15)} x="{rx}" y="{y+48}" width="196" height="1" fill="{RULE}"/>')
-    label = (f'{s["total"]:,} contributions in the last 12 months. {cur} day current streak, longest {lng}. '
-             f'{s["active_days"]} of {len(data["days"])} days with a commit. {best["count"]} on the busiest day.')
-    return svg(W, h, "".join(b), ["serif", "serif-i", "sans", "mono"], label)
-
 
 # ---- this month ---------------------------------------------------------------
 MONTH_KINDS = [("commits", "commit", "commits"), ("pull_requests", "pull request", "pull requests"),
@@ -497,7 +439,7 @@ def pace_card(data):
     run = lambda xs: [sum(xs[:i+1]) for i in range(len(xs))]
     cur = run([d["count"] for d in days if d["date"].startswith(ym)])
     prv = run([d["count"] for d in days if d["date"].startswith(pm)])
-    h = 352
+    h = 376
     b = [card(W, h)]
     b.append(f'<text class="u" x="44" y="62" font-family="{MONO}" font-size="12" letter-spacing="1.8" '
              f'fill="{INK_SOFT}">THIS MONTH VS LAST MONTH, DAY BY DAY</text>')
@@ -509,12 +451,23 @@ def pace_card(data):
     word = "ahead of" if ahead >= 0 else "behind"
     b.append(f'<text class="u"{at(.1)} x="40" y="122" font-family="{SERIF}" font-size="60" letter-spacing="-1" '
              f'fill="{INK}">{abs(ahead):,} <tspan font-style="italic" fill="{ACCENT}">{word}</tspan> {pname}</text>')
-    bx, bw, base, top = 44, 560, h - GAP - 44, 160
+    bx, bw, base, top = 96, 500, h - GAP - 52, 160
     mx = max(prv[-1], cur[-1], 1)
+    # y axis: a round step so there are 3-5 gridlines, labelled on the left
+    step = next(st for st in (1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 5000)
+                if mx / st <= 4)
+    top_v = -(-mx // step) * step
     X = lambda i: bx + i*bw/30
-    Y = lambda v: base - v/mx*(base-top)
+    Y = lambda v: base - v/top_v*(base-top)
     line = lambda v: "M" + " L".join(f"{X(i):.1f},{Y(c):.1f}" for i, c in enumerate(v))
-    b.append(f'<rect x="{bx}" y="{base}" width="{bw}" height="1" fill="{RULE}"/>')
+    for v in range(0, top_v + 1, step):
+        b.append(f'<rect class="i"{at(.2)} x="{bx}" y="{Y(v):.1f}" width="{bw}" height="1" fill="{RULE}" '
+                 f'opacity="{1 if v == 0 else .6}"/><text class="i"{at(.2)} x="{bx-10}" y="{Y(v)+4:.1f}" '
+                 f'text-anchor="end" font-family="{MONO}" font-size="11" fill="{MUTED}">{v:,}</text>')
+    b.append(f'<text class="i"{at(.2)} transform="translate(50 {(top+base)/2:.0f}) rotate(-90)" text-anchor="middle" '
+             f'font-family="{MONO}" font-size="10" letter-spacing="1.5" fill="{MUTED}">RUNNING TOTAL</text>')
+    b.append(f'<text class="i"{at(.2)} x="{bx + bw/2:.0f}" y="{base+40}" text-anchor="middle" font-family="{MONO}" '
+             f'font-size="10" letter-spacing="1.5" fill="{MUTED}">DAY OF THE MONTH</text>')
     # dashed, so it fades in rather than drawing (the draw animation needs a solid stroke)
     b.append(f'<path class="i"{at(.2)} d="{line(prv)}" fill="none" stroke="{MUTED}" '
              f'stroke-width="2" stroke-dasharray="5 4" opacity=".7"/>')
@@ -741,10 +694,9 @@ def readme_block(data):
         '<div align="center">',
         f'<a href="{LINK_URL}">{img("hero.svg", f"{FIRST} {LAST}. {EYEBROW.capitalize()}.")}</a><br>',
         img("heatmap.svg", f"Contribution graph, in {ACCENT_WORD}, refreshed daily") + "<br>",
-        img("activity.svg", "Contributions in the last 12 months, by month, with streak and busiest day") + "<br>",
+        img("pace.svg", "This month vs last month, as running totals") + "<br>",
         img("month.svg", "This month: contributions by day") + "<br>",
         img("waffle.svg", "This month, one square per contribution, coloured by type, in order") + "<br>",
-        img("pace.svg", "This month vs last month, as running totals") + "<br>",
         img("hours.svg", "Contributions by hour of day" if data.get("includes_private")
             else "Public contributions by hour of day (private repos not counted)") + "<br>",
         img("words.svg", "Most used words in this month's commit messages") + "<br>",
@@ -775,7 +727,6 @@ def main():
             os.remove(os.path.join(OUT, old))
     write("hero.svg", hero(data))
     write("heatmap.svg", heatmap(data))
-    write("activity.svg", activity(data))
     write("month.svg", month_card(data))
     write("waffle.svg", waffle_card(data))
     write("pace.svg", pace_card(data))

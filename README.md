@@ -2,10 +2,9 @@
 <div align="center">
 <a href="https://thinhphatho.pages.dev/"><img src="./cards/hero.svg" width="100%" alt="Thinh Phat Ho. Software engineering @ uit." /></a><br>
 <img src="./cards/heatmap.svg" width="100%" alt="Contribution graph, in orange, refreshed daily" /><br>
-<img src="./cards/activity.svg" width="100%" alt="Contributions in the last 12 months, by month, with streak and busiest day" /><br>
+<img src="./cards/pace.svg" width="100%" alt="This month vs last month, as running totals" /><br>
 <img src="./cards/month.svg" width="100%" alt="This month: contributions by day" /><br>
 <img src="./cards/waffle.svg" width="100%" alt="This month, one square per contribution, coloured by type, in order" /><br>
-<img src="./cards/pace.svg" width="100%" alt="This month vs last month, as running totals" /><br>
 <img src="./cards/hours.svg" width="100%" alt="Contributions by hour of day" /><br>
 <img src="./cards/words.svg" width="100%" alt="Most used words in this month&#x27;s commit messages" /><br>
 <img src="./cards/paper.svg" width="33.333%" alt="PAPER: ISWTA 2026" /><img src="./cards/research.svg" width="33.333%" alt="RESEARCH: UAV detection" /><img src="./cards/build.svg" width="33.333%" alt="BUILD: 2 systems" />
