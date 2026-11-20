@@ -299,7 +299,7 @@ def activity(data):
 # ---- this month ---------------------------------------------------------------
 MONTH_KINDS = [("commits", "commit", "commits"), ("pull_requests", "pull request", "pull requests"),
                ("reviews", "review", "reviews"), ("issues", "issue", "issues"),
-               ("repos", "new repo", "new repos"), ("private", "private", "private")]
+               ("repos", "new repo", "new repos"), ("other", "other", "other")]
 
 
 def month_card(data):
@@ -312,9 +312,22 @@ def month_card(data):
     ndays = calendar.monthrange(ref.year, ref.month)[1]
     mname = ref.strftime("%B")
     m = data.get("month") or {}
-    counts = m.get("counts") if m.get("month") == ym else None
-    prev = (m.get("prev") or {}).get("counts") if counts else None
+    counts = dict(m["counts"]) if m.get("month") == ym else None
+    prev = dict((m.get("prev") or {}).get("counts") or {}) if counts else None
     pname = datetime.date.fromisoformat(m["prev"]["month"] + "-01").strftime("%b") if prev else ""
+    monthly = {x["month"]: x["count"] for x in data["stats"]["monthly"]}
+
+    def with_other(c, cal_total):
+        # The calendar total is the one every card shows; whatever GitHub
+        # doesn't break down by type (private repos it hides, or anything the
+        # five types miss) goes in "other", so the columns always add up to it.
+        known = sum(c.get(k, 0) for k, _, _ in MONTH_KINDS[:5])
+        c["other"] = max(0, (cal_total if cal_total is not None else known) - known)
+        return c
+    if counts:
+        counts = with_other(counts, total)
+    if prev:
+        prev = with_other(prev, monthly.get(m["prev"]["month"]))
 
     h = 384
     b = [card(W, h)]
@@ -357,7 +370,7 @@ def month_card(data):
     b.append(f'<rect class="i"{at(.6)} x="44" y="262" width="{W-88}" height="1" fill="{RULE}"/>')
 
     # the breakdown: one column per kind of contribution
-    kinds = [k for k in MONTH_KINDS if k[0] != "private" or (counts and (counts["private"] or (prev or {}).get("private")))]
+    kinds = [k for k in MONTH_KINDS if k[0] != "other" or (counts and counts["other"])]
     col = (W - 88) / len(kinds)
     for i, (key, one, many) in enumerate(kinds):
         x = 44 + i*col
@@ -408,24 +421,35 @@ def hour_label(h):
     return f"{h % 12 or 12} {'am' if h < 12 else 'pm'}"
 
 
-def hours_card(data):
-    hours = data["hours"]
+def hours_card(data, monthly=False):
+    hours = data["month_hours"] if monthly else data["hours"]
     tz = data.get("tz_offset", 7)
-    total = sum(hours)
     priv = data.get("includes_private", False)
     pub = "" if priv else "public "
+    ref = datetime.date.fromisoformat(data["days"][-1]["date"])
+    mname = ref.strftime("%B")
+    # Bars and percentages come from contributions with a known time; the total
+    # shown is the calendar's, so it matches the other cards. (GitHub counts a
+    # few contributions whose time the API doesn't expose.)
+    timed = sum(hours)
+    if priv:
+        total = (next((x["count"] for x in data["stats"]["monthly"] if x["month"] == ref.strftime("%Y-%m")), timed)
+                 if monthly else data["stats"]["total"])
+    else:
+        total = timed
+    span = f"in {mname} so far" if monthly else "in the last year"
     h = 352
     b = [card(W, h)]
     tzs = f"UTC{'+' if tz >= 0 else '-'}{abs(tz)}"
     b.append(f'<text class="u" x="44" y="62" font-family="{MONO}" font-size="12" letter-spacing="1.8" '
-             f'fill="{INK_SOFT}">{pub.upper()}CONTRIBUTIONS BY HOUR OF DAY · {tzs}</text>')
+             f'fill="{INK_SOFT}">{pub.upper()}CONTRIBUTIONS BY HOUR OF DAY · {mname.upper() + " · " if monthly else ""}{tzs}</text>')
 
     groups = {"night": [22, 23, 0, 1, 2, 3, 4], "morning": [5, 6, 7, 8, 9, 10, 11],
               "day": [12, 13, 14, 15, 16, 17], "evening": [18, 19, 20, 21]}
     names = {"night": ("Mostly a", "night owl"), "morning": ("Mostly an", "early bird"),
              "day": ("Mostly a", "daytime coder"), "evening": ("Mostly an", "evening coder")}
     top = max(groups, key=lambda g: sum(hours[x] for x in groups[g]))
-    lead, word = names[top] if total else ("Waiting for", "contributions")
+    lead, word = names[top] if timed else ("Waiting for", "contributions")
     b.append(f'<text class="u"{at(.1)} x="40" y="122" font-family="{SERIF}" font-size="66" letter-spacing="-1" '
              f'fill="{INK}">{lead} <tspan font-style="italic" fill="{ACCENT}">{word}</tspan></text>')
 
@@ -453,12 +477,12 @@ def hours_card(data):
                  f'font-family="{MONO}" font-size="11" fill="{MUTED}">{i:02d}</text>')
 
     rx = 640
-    after6 = round(100 * sum(hours[18:]) / total) if total else 0
+    after6 = round(100 * sum(hours[18:]) / timed) if timed else 0
     rows = [
         (f'{hour_label(peak_h).split()[0]} <tspan font-style="italic">{hour_label(peak_h).split()[1]}</tspan>',
          "my busiest hour"),
         (f'{after6}<tspan fill="{MUTED}">%</tspan>', "of contributions after 6 pm"),
-        (f'{total:,}', f"{pub}contributions, past year"),
+        (f'{total:,}', f"in {mname} so far" if monthly else f"{pub}contributions, past year"),
     ]
     for i, (big, sub) in enumerate(rows):
         y = 102 + i*97  # number baseline; divider sits midway between rows
@@ -470,7 +494,7 @@ def hours_card(data):
             b.append(f'<rect class="i"{at(.7 + i*.15)} x="{rx}" y="{y+48}" width="196" height="1" fill="{RULE}"/>')
     label = (f"{pub.capitalize() or 'C'}{'ontributions' if priv else 'contributions'} by hour of day ({tzs}): "
              f"{lead} {word}. Busiest hour {hour_label(peak_h)}, "
-             f"{after6}% after 6 pm, {total} {pub}contributions in the last year."
+             f"{after6}% after 6 pm, {total} {pub}contributions {span}."
              + ("" if priv else " Private repos are not counted."))
     return svg(W, h, "".join(b), ["serif", "serif-i", "sans", "mono"], label)
 
