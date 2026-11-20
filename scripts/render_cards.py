@@ -252,8 +252,7 @@ def activity(data):
     today = datetime.date.today()
     this_month = today.strftime("%Y-%m")
     nxt = (today.replace(day=1) + datetime.timedelta(days=32)).strftime("%Y-%m")
-    full = [m["count"] for m in months if m["month"] != this_month] or [1]
-    peak = max(full + [1])
+    peak = max([m["count"] for m in months] + [1])  # the month so far counts too, once it leads
     bx, bw, base, top = 44, 520, h - GAP - 44, 160
     slot = bw / 12
     nx = bx + len(months)*slot + slot*0.1
@@ -262,9 +261,9 @@ def activity(data):
              f'{datetime.date.fromisoformat(nxt + "-01").strftime("%b")}</text>')
     for i, m in enumerate(months):
         partial = m["month"] == this_month
-        bh = max(4, min(1, m["count"] / peak) * (base - top))
+        bh = max(4, m["count"] / peak * (base - top))
         x = bx + i*slot + slot*0.1
-        fill = GREY_BAR if partial else ACCENT if m["count"] == peak else INK
+        fill = ACCENT if m["count"] == peak else GREY_BAR if partial else INK
         b.append(f'<rect class="b"{at(.4 + i*.06)} x="{x:.1f}" y="{base-bh:.1f}" width="{slot*0.8:.1f}" '
                  f'height="{bh:.1f}" rx="4" fill="{fill}"><title>{m["count"]} in {m["month"]}</title></rect>')
         mon = datetime.date.fromisoformat(m["month"] + "-01").strftime("%b")
@@ -294,6 +293,90 @@ def activity(data):
             b.append(f'<rect class="i"{at(.7 + i*.15)} x="{rx}" y="{y+48}" width="196" height="1" fill="{RULE}"/>')
     label = (f'{s["total"]:,} contributions in the last 12 months. {cur} day current streak, longest {lng}. '
              f'{s["active_days"]} of {len(data["days"])} days with a commit. {best["count"]} on the busiest day.')
+    return svg(W, h, "".join(b), ["serif", "serif-i", "sans", "mono"], label)
+
+
+# ---- this month ---------------------------------------------------------------
+MONTH_KINDS = [("commits", "commit", "commits"), ("pull_requests", "pull request", "pull requests"),
+               ("reviews", "review", "reviews"), ("issues", "issue", "issues"),
+               ("repos", "new repo", "new repos"), ("private", "private", "private")]
+
+
+def month_card(data):
+    import calendar
+    days = data["days"]
+    ref = datetime.date.fromisoformat(days[-1]["date"])
+    ym = ref.strftime("%Y-%m")
+    mdays = {d["date"]: d["count"] for d in days if d["date"].startswith(ym)}
+    total = sum(mdays.values())
+    ndays = calendar.monthrange(ref.year, ref.month)[1]
+    mname = ref.strftime("%B")
+    m = data.get("month") or {}
+    counts = m.get("counts") if m.get("month") == ym else None
+    prev = (m.get("prev") or {}).get("counts") if counts else None
+    pname = datetime.date.fromisoformat(m["prev"]["month"] + "-01").strftime("%b") if prev else ""
+
+    h = 384
+    b = [card(W, h)]
+    b.append(f'<text class="u" x="44" y="62" font-family="{MONO}" font-size="12" letter-spacing="1.8" '
+             f'fill="{INK_SOFT}">CONTRIBUTIONS THIS MONTH</text>')
+    b.append(f'<text class="u"{at(.05)} x="{W-44}" y="62" text-anchor="end" font-family="{MONO}" font-size="12" '
+             f'letter-spacing="1.8" fill="{MUTED}">DAY {ref.day} OF {ndays}</text>')
+    b.append(f'<text class="u"{at(.1)} x="40" y="122" font-family="{SERIF}" font-size="66" letter-spacing="-1" '
+             f'fill="{INK}">{total:,} <tspan font-style="italic" fill="{ACCENT}">in {mname}</tspan></text>')
+    prev_total = next((x["count"] for x in data["stats"]["monthly"]
+                       if x["month"] == (ref.replace(day=1) - datetime.timedelta(days=1)).strftime("%Y-%m")), None)
+    if prev_total is not None:
+        pm = (ref.replace(day=1) - datetime.timedelta(days=1)).strftime("%B")
+        b.append(f'<text class="u"{at(.2)} x="{W-44}" y="116" text-anchor="end" font-family="{SANS}" '
+                 f'font-size="14.5" fill="{INK_SOFT}">{prev_total:,} in all of {pm}</text>')
+
+    # one bar per day of the month; days still to come are faint stubs
+    bx, bw, base, ceil = 44, W - 88, 226, 164
+    slot = bw / ndays
+    peak_day = max(mdays, key=lambda k: mdays[k]) if total else None
+    peak = max(list(mdays.values()) + [1])
+    for i in range(ndays):
+        date = f"{ym}-{i+1:02d}"
+        x = bx + i*slot + slot*0.15
+        if date not in mdays:
+            b.append(f'<rect class="i"{at(.4 + i*.02)} x="{x:.1f}" y="{base-3}" width="{slot*0.7:.1f}" height="3" '
+                     f'rx="1.5" fill="{EMPTY}"/>')
+            continue
+        c = mdays[date]
+        bh = max(3, c / peak * (base - ceil))
+        fill = ACCENT if date == peak_day else INK if c else GREY_BAR
+        b.append(f'<rect class="b"{at(.4 + i*.02)} x="{x:.1f}" y="{base-bh:.1f}" width="{slot*0.7:.1f}" '
+                 f'height="{bh:.1f}" rx="2.5" fill="{fill}"><title>{c} on {date}</title></rect>')
+        if date == peak_day:
+            b.append(f'<text class="i"{at(1.2)} x="{x + slot*0.35:.1f}" y="{base-bh-8:.1f}" text-anchor="middle" '
+                     f'font-family="{MONO}" font-size="11.5" fill="{ACCENT}">{c}</text>')
+    for d in sorted({1, 10, 20, ndays}):
+        b.append(f'<text class="i"{at(.8)} x="{bx + (d-1)*slot + slot*0.5:.1f}" y="{base+20}" text-anchor="middle" '
+                 f'font-family="{MONO}" font-size="11" fill="{MUTED}">{d}</text>')
+    b.append(f'<rect class="i"{at(.6)} x="44" y="262" width="{W-88}" height="1" fill="{RULE}"/>')
+
+    # the breakdown: one column per kind of contribution
+    kinds = [k for k in MONTH_KINDS if k[0] != "private" or (counts and (counts["private"] or (prev or {}).get("private")))]
+    col = (W - 88) / len(kinds)
+    for i, (key, one, many) in enumerate(kinds):
+        x = 44 + i*col
+        n = counts[key] if counts else None
+        big = f"{n:,}" if n is not None else "–"
+        b.append(f'<g class="u"{at(.7 + i*.08)}><text x="{x}" y="310" font-family="{SERIF}" font-size="44" '
+                 f'letter-spacing="-.5" fill="{INK}">{big}</text>'
+                 f'<text x="{x+1}" y="334" font-family="{SANS}" font-size="14.5" fill="{INK_SOFT}">'
+                 f'{escape(one if n == 1 else many)}</text>')
+        if prev is not None:
+            p = prev.get(key, 0)
+            up = n > p
+            b.append(f'<text x="{x+1}" y="352" font-family="{MONO}" font-size="11" '
+                     f'fill="{ACCENT if up else MUTED}">{"↑ " if up else ""}{pname} {p:,}</text>')
+        b.append("</g>")
+
+    parts = ", ".join(f"{counts[k]} {o if counts[k] == 1 else mny}" for k, o, mny in kinds) if counts else ""
+    label = (f"{total} contributions in {mname} so far (day {ref.day} of {ndays})"
+             + (f": {parts}." if parts else "."))
     return svg(W, h, "".join(b), ["serif", "serif-i", "sans", "mono"], label)
 
 
@@ -424,6 +507,7 @@ def readme_block(data):
         f'<a href="{LINK_URL}">{img("hero.svg", f"{FIRST} {LAST}. {EYEBROW.capitalize()}.")}</a><br>',
         img("heatmap.svg", f"Contribution graph, in {ACCENT_WORD}, refreshed daily") + "<br>",
         img("activity.svg", "Contributions in the last 12 months, by month, with streak and busiest day") + "<br>",
+        img("month.svg", "This month: contributions by day, plus commits, pull requests, reviews, issues and new repos") + "<br>",
         "".join(img(f"{t[0]}.svg", f"{t[1]}: {t[3]} {t[4]}", third) for t in TILES) + "<br>",
         '<picture><source media="(prefers-color-scheme: dark)" srcset="./cards/title-code-dark.svg" />'
         + img("title-code-light.svg", "When I code") + "</picture><br>",
@@ -455,6 +539,7 @@ def main():
     write("hero.svg", hero())
     write("heatmap.svg", heatmap(data))
     write("activity.svg", activity(data))
+    write("month.svg", month_card(data))
     for i, t in enumerate(TILES):
         write(f"{t[0]}.svg", tile(i, *t[1:]))
     write("title-code-light.svg", title("When I", "code", False))
