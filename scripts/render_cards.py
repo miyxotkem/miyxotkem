@@ -412,11 +412,13 @@ def hours_card(data):
     hours = data["hours"]
     tz = data.get("tz_offset", 7)
     total = sum(hours)
+    priv = data.get("includes_private", False)
+    pub = "" if priv else "public "
     h = 352
     b = [card(W, h)]
     tzs = f"UTC{'+' if tz >= 0 else '-'}{abs(tz)}"
     b.append(f'<text class="u" x="44" y="62" font-family="{MONO}" font-size="12" letter-spacing="1.8" '
-             f'fill="{INK_SOFT}">PUBLIC CONTRIBUTIONS BY HOUR OF DAY · {tzs}</text>')
+             f'fill="{INK_SOFT}">{pub.upper()}CONTRIBUTIONS BY HOUR OF DAY · {tzs}</text>')
 
     groups = {"night": [22, 23, 0, 1, 2, 3, 4], "morning": [5, 6, 7, 8, 9, 10, 11],
               "day": [12, 13, 14, 15, 16, 17], "evening": [18, 19, 20, 21]}
@@ -456,7 +458,7 @@ def hours_card(data):
         (f'{hour_label(peak_h).split()[0]} <tspan font-style="italic">{hour_label(peak_h).split()[1]}</tspan>',
          "my busiest hour"),
         (f'{after6}<tspan fill="{MUTED}">%</tspan>', "of contributions after 6 pm"),
-        (f'{total:,}', "public contributions, past year"),
+        (f'{total:,}', f"{pub}contributions, past year"),
     ]
     for i, (big, sub) in enumerate(rows):
         y = 102 + i*97  # number baseline; divider sits midway between rows
@@ -466,9 +468,10 @@ def hours_card(data):
                  f'{escape(sub)}</text></g>')
         if i < 2:
             b.append(f'<rect class="i"{at(.7 + i*.15)} x="{rx}" y="{y+48}" width="196" height="1" fill="{RULE}"/>')
-    label = (f"Public contributions by hour of day ({tzs}): {lead} {word}. Busiest hour {hour_label(peak_h)}, "
-             f"{after6}% after 6 pm, {total} public contributions in the last year. "
-             f"Private repos are not counted.")
+    label = (f"{pub.capitalize() or 'C'}{'ontributions' if priv else 'contributions'} by hour of day ({tzs}): "
+             f"{lead} {word}. Busiest hour {hour_label(peak_h)}, "
+             f"{after6}% after 6 pm, {total} {pub}contributions in the last year."
+             + ("" if priv else " Private repos are not counted."))
     return svg(W, h, "".join(b), ["serif", "serif-i", "sans", "mono"], label)
 
 
@@ -501,7 +504,8 @@ def readme_block(data):
         img("heatmap.svg", f"Contribution graph, in {ACCENT_WORD}, refreshed daily") + "<br>",
         img("activity.svg", "Contributions in the last 12 months, by month, with streak and busiest day") + "<br>",
         img("month.svg", "This month: contributions by day, plus commits, pull requests, reviews, issues and new repos") + "<br>",
-        img("hours.svg", "Public contributions by hour of day (private repos not counted)") + "<br>",
+        img("hours.svg", "Contributions by hour of day" if data.get("includes_private")
+            else "Public contributions by hour of day (private repos not counted)") + "<br>",
         "".join(img(f"{t[0]}.svg", f"{t[1]}: {t[3]} {t[4]}", third) for t in TILES),
         "</div>",
         "",
