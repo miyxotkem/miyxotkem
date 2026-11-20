@@ -65,6 +65,13 @@ query($owner: String!, $name: String!, $uid: ID!, $since: GitTimestamp!, $after:
 
 # Every non-commit contribution type the calendar counts carries an occurredAt
 # timestamp; commits don't, so those come from each repo's git history instead.
+# Where each kind of contribution keeps its repository (for the status line).
+REPO = "repository { name isPrivate }"
+EVENT_REPO = {"pullRequestContributions": f"pullRequest {{ {REPO} }}",
+              "issueContributions": f"issue {{ {REPO} }}",
+              "pullRequestReviewContributions": REPO,
+              "repositoryContributions": REPO}
+
 EVENT_KINDS = ["pullRequestContributions", "issueContributions",
                "pullRequestReviewContributions", "repositoryContributions"]
 
@@ -74,7 +81,7 @@ query($login: String!, $after: String, $from: DateTime, $to: DateTime) {
     contributionsCollection(from: $from, to: $to) {
       %s(first: 100, after: $after) {
         pageInfo { hasNextPage endCursor }
-        nodes { occurredAt }
+        nodes { occurredAt %s }
       }
     }
   }
@@ -154,7 +161,8 @@ def event_hours(token, tally, window=None, found=None):
         after = None
         for _ in range(20):  # at most 2,000 of each kind
             try:
-                data = gql(token, EVENTS % kind, {"login": USERNAME, "after": after, **(window or {})})
+                data = gql(token, EVENTS % (kind, EVENT_REPO[kind]),
+                           {"login": USERNAME, "after": after, **(window or {})})
             except Exception as e:
                 print(f"skip {kind}: {e}", file=sys.stderr)
                 break
@@ -162,7 +170,8 @@ def event_hours(token, tally, window=None, found=None):
             for n in page["nodes"]:
                 tally(n["occurredAt"])
                 if found is not None:
-                    found.append((n["occurredAt"], kind))
+                    node = n.get("pullRequest") or n.get("issue") or n
+                    found.append((n["occurredAt"], kind, node.get("repository") or {}))
             if not page["pageInfo"]["hasNextPage"]:
                 break
             after = page["pageInfo"]["endCursor"]
@@ -208,14 +217,21 @@ def contribution_hours(token, user):
              "pullRequestReviewContributions": "review", "repositoryContributions": "repo"}
     when = lambda st: datetime.datetime.fromisoformat(st.replace("Z", "+00:00"))
     events = [(n["authoredDate"], "commit") for _, n in commits if when(n["authoredDate"]) >= month_start]
-    events += [(st, short[k]) for st, k in month_found]
+    events += [(st, short[k]) for st, k, _ in month_found]
     events.sort(key=lambda e: when(e[0]))
     more = extras(user, commits, month_start)
+    # the latest contribution of any kind; a private repo's name is never written out
+    latest = [(n["authoredDate"], "commit", r) for r, n in commits]
+    latest += [(st, short[k], repo) for st, k, repo in month_found]
+    if latest:
+        st, k, repo = max(latest, key=lambda e: when(e[0]))
+        more["latest"] = {"at": st, "kind": k,
+                          "repo": None if repo.get("isPrivate", True) else repo.get("name")}
     more["month_events"] = [[when(st).strftime("%Y-%m-%dT%H:%M:%SZ"), k] for st, k in events]
     return hours, month_hours, more
 
 
-# ---- words, languages and latest commit (for the words, wrapped and status cards)
+# ---- words, languages and latest commit (for the words card and the hero's status line)
 # Commit messages from private repos stay out of the words card unless this is
 # set, because the card is public. Set WORDS_INCLUDE_PRIVATE=1 to count them.
 WORDS_INCLUDE_PRIVATE = os.environ.get("WORDS_INCLUDE_PRIVATE") == "1"

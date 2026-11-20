@@ -150,8 +150,8 @@ def eyebrow(x, y, text, color=ACCENT, delay=0):
 
 
 # ---- hero -------------------------------------------------------------------
-def hero():
-    h = 432
+def hero(data):
+    h = 486
     b = [card(W, h)]
     b.append(eyebrow(48, 64, EYEBROW))
     b.append(f'<text class="u"{at(.15)} x="44" y="190" font-family="{SERIF}" font-size="104" '
@@ -184,8 +184,43 @@ def hero():
                          f'textLength="{len(run)*cw:.1f}" lengthAdjust="spacingAndGlyphs" '
                          f'xml:space="preserve">{escape(run)}</text>')
         b.append("</g>")
+    status, status_label = status_row(data, h)
+    b += status
     return svg(W, h, "".join(b), ["serif", "serif-i", "sans", "mono"],
-               f"{FIRST} {LAST}. {EYEBROW.title()}. {' '.join(BLURB)}")
+               f"{FIRST} {LAST}. {EYEBROW.title()}. {' '.join(BLURB)} {status_label}")
+
+
+KIND_WORD = {"commit": "commit", "pr": "pull request", "review": "review",
+             "issue": "issue", "repo": "new repo"}
+
+
+def status_row(data, h):
+    """The hero's last line: the latest contribution of any kind, and the streak."""
+    y = h - GAP - 34
+    b = [f'<rect class="i"{at(.9)} x="48" y="{y-30}" width="{W-96}" height="1" fill="{RULE}"/>']
+    latest = data.get("latest")
+    label = ""
+    if latest:
+        tz = datetime.timezone(datetime.timedelta(hours=data.get("tz_offset", 7)))
+        t = datetime.datetime.fromisoformat(latest["at"].replace("Z", "+00:00"))
+        upd = datetime.datetime.strptime(data["updated"], "%Y-%m-%d %H:%M UTC").replace(tzinfo=datetime.timezone.utc)
+        fresh = upd - t < datetime.timedelta(hours=24)
+        lt = t.astimezone(tz)
+        when = f"{lt.strftime('%a %-d %b')}, {lt.strftime('%-I:%M')} {'am' if lt.hour < 12 else 'pm'}"
+        what = KIND_WORD.get(latest.get("kind", "commit"), "contribution")
+        where = latest["repo"] or "a private repo"
+        b.append(f'<circle class="{"beat" if fresh else ""}" cx="56" cy="{y-5}" r="5" fill="{"#3fb950" if fresh else GREY_BAR}"/>')
+        b.append(f'<text class="u"{at(1)} x="72" y="{y}" font-family="{SANS}" font-size="15" fill="{INK}">'
+                 f'{"Shipping lately" if fresh else "Last seen"} <tspan fill="{MUTED}">·</tspan> '
+                 f'<tspan fill="{INK_SOFT}">last {what} {escape(when)} in </tspan>'
+                 f'<tspan font-family="{MONO}" font-size="13" fill="{INK}">{escape(where)}</tspan></text>')
+        label = f"Last {what} {when} in {where}."
+    cur = data["stats"]["current_streak"]
+    if cur:
+        b.append(f'<text class="u"{at(1.1)} x="{W-48}" y="{y}" text-anchor="end" font-family="{MONO}" font-size="12" '
+                 f'letter-spacing="1.5" fill="{ACCENT}">{cur}-DAY STREAK</text>')
+        label += f" {cur}-day streak."
+    return b, label
 
 
 # ---- heatmap ----------------------------------------------------------------
@@ -525,36 +560,6 @@ def hours_card(data, monthly=False):
     return svg(W, h, "".join(b), ["serif", "serif-i", "sans", "mono"], label)
 
 
-# ---- status line --------------------------------------------------------------
-def status_card(data):
-    h = 84
-    latest = data.get("latest")
-    b = [card(W, h)]
-    mid = (h - GAP) / 2
-    if latest:
-        tz = datetime.timezone(datetime.timedelta(hours=data.get("tz_offset", 7)))
-        t = datetime.datetime.fromisoformat(latest["at"].replace("Z", "+00:00"))
-        upd = datetime.datetime.strptime(data["updated"], "%Y-%m-%d %H:%M UTC").replace(tzinfo=datetime.timezone.utc)
-        fresh = upd - t < datetime.timedelta(hours=24)
-        lt = t.astimezone(tz)
-        when = f"{lt.strftime('%a %-d %b')}, {lt.strftime('%-I:%M')} {'am' if lt.hour < 12 else 'pm'}"
-        where = latest["repo"] or "a private repo"
-        b.append(f'<circle class="{"beat" if fresh else ""}" cx="62" cy="{mid}" r="6" fill="{"#3fb950" if fresh else GREY_BAR}"/>')
-        b.append(f'<text class="u" x="82" y="{mid+6}" font-family="{SANS}" font-size="17" fill="{INK}">'
-                 f'{"Shipping lately" if fresh else "Last seen"} <tspan fill="{MUTED}">·</tspan> '
-                 f'<tspan fill="{INK_SOFT}">last commit {escape(when)} in </tspan>'
-                 f'<tspan font-family="{MONO}" font-size="14.5" fill="{INK}">{escape(where)}</tspan></text>')
-        label = f"Last commit {when} in {where}."
-    else:
-        b.append(f'<text x="82" y="{mid+6}" font-family="{SANS}" font-size="17" fill="{MUTED}">Waiting for the next refresh</text>')
-        label = "Status"
-    cur = data["stats"]["current_streak"]
-    if cur:
-        b.append(f'<text class="u"{at(.2)} x="{W-44}" y="{mid+5}" text-anchor="end" font-family="{MONO}" font-size="12" '
-                 f'letter-spacing="1.5" fill="{ACCENT}">{cur}-DAY STREAK</text>')
-        label += f" {cur}-day streak."
-    return svg(W, h, "".join(b), ["sans", "mono"], label)
-
 
 # ---- words from commit messages --------------------------------------------------
 def words_card(data):
@@ -592,43 +597,6 @@ def words_card(data):
                "Most used words in this month's commit messages: " + ", ".join(shown))
 
 
-# ---- wrapped ------------------------------------------------------------------
-def wrapped_card(data):
-    s = data["stats"]
-    hours = data["hours"]
-    h = 412
-    b = [card(W, h, INK)]
-    b.append(f'<text class="u" x="44" y="62" font-family="{MONO}" font-size="12" letter-spacing="1.8" '
-             f'fill="{GREY_BAR}">MY YEAR ON GITHUB, WRAPPED</text>')
-    b.append(f'<text class="u" x="{W-44}" y="62" text-anchor="end" font-family="{MONO}" font-size="12" '
-             f'letter-spacing="1.8" fill="{MUTED}">LAST 12 MONTHS</text>')
-    b.append(f'<text class="u"{at(.1)} x="38" y="156" font-family="{SERIF}" font-size="104" letter-spacing="-2" '
-             f'fill="{PAPER}">{s["total"]:,}</text>')
-    b.append(f'<text class="u"{at(.2)} x="44" y="196" font-family="{SERIF}" font-style="italic" font-size="40" '
-             f'fill="{ACCENT}">contributions</text>')
-    peak_h = max(range(24), key=lambda x: hours[x])
-    best = s["best_day"]
-    langs = data.get("languages") or []
-    tiles = [(hour_label(peak_h), "busiest hour"),
-             (datetime.date.fromisoformat(best["date"]).strftime("%-d %b") if best["date"] else "–",
-              f'best day · {best["count"]}'),
-             (f'{s["longest_streak"]}d', "longest streak"),
-             (langs[0][0] if langs else "–", "top language")]
-    fills = [ACCENT, COLORS["learn"], "#3d3a35", "#a24f33"]
-    cw = (W - 88 + 12) / 4  # 12px gutters, flush with both margins
-    for i, (big, sub) in enumerate(tiles):
-        x = 44 + i*cw
-        ink = INK if i == 1 else "#ffffff"
-        fs = 44 if len(big) <= 7 else 34
-        b.append(f'<g class="drop"{at(.4 + i*.15)}><rect x="{x:.1f}" y="232" width="{cw-12:.1f}" height="128" rx="12" '
-                 f'fill="{fills[i]}"/><text x="{x+18:.1f}" y="306" font-family="{SERIF}" font-size="{fs}" '
-                 f'fill="{ink}">{escape(big)}</text><text x="{x+18:.1f}" y="338" font-family="{SANS}" font-size="14" '
-                 f'fill="{ink}" opacity=".85">{escape(sub)}</text></g>')
-    label = (f'My last 12 months on GitHub: {s["total"]:,} contributions. Busiest hour {tiles[0][0]}, '
-             f'best day {tiles[1][0]} with {best["count"]}, longest streak {s["longest_streak"]} days, '
-             f'top language {tiles[3][0]}.')
-    return svg(W, h, "".join(b), ["serif", "serif-i", "sans", "mono"], label)
-
 
 # ---- footer links -------------------------------------------------------------
 # GitHub strips CSS from READMEs, so the links are drawn as small images in the
@@ -656,14 +624,12 @@ def readme_block(data):
         "<!-- cards:start (generated by scripts/render_cards.py; edit the script, not this block) -->",
         '<div align="center">',
         f'<a href="{LINK_URL}">{img("hero.svg", f"{FIRST} {LAST}. {EYEBROW.capitalize()}.")}</a><br>',
-        img("status.svg", "Latest commit and current streak") + "<br>",
         img("heatmap.svg", f"Contribution graph, in {ACCENT_WORD}, refreshed daily") + "<br>",
         img("activity.svg", "Contributions in the last 12 months, by month, with streak and busiest day") + "<br>",
         img("month.svg", "This month: contributions by day, plus commits, pull requests, reviews, issues and new repos") + "<br>",
         img("hours.svg", "Contributions by hour of day" if data.get("includes_private")
             else "Public contributions by hour of day (private repos not counted)") + "<br>",
         img("words.svg", "Most used words in this month's commit messages") + "<br>",
-        img("wrapped.svg", "My last 12 months on GitHub, wrapped") + "<br>",
         "".join(img(f"{t[0]}.svg", f"{t[1]}: {t[3]} {t[4]}", third) for t in TILES),
         "</div>",
         "",
@@ -689,16 +655,14 @@ def main():
     for old in os.listdir(OUT) if os.path.isdir(OUT) else []:
         if old.endswith(".svg"):
             os.remove(os.path.join(OUT, old))
-    write("hero.svg", hero())
+    write("hero.svg", hero(data))
     write("heatmap.svg", heatmap(data))
     write("activity.svg", activity(data))
     write("month.svg", month_card(data))
     for i, t in enumerate(TILES):
         write(f"{t[0]}.svg", tile(i, *t[1:]))
     write("hours.svg", hours_card(data))
-    write("status.svg", status_card(data))
     write("words.svg", words_card(data))
-    write("wrapped.svg", wrapped_card(data))
     for i, (t, _) in enumerate(FOOTER_LINKS):
         write(f"link-{t}.svg", link_svg(t, i == len(FOOTER_LINKS) - 1))
     readme_block(data)
