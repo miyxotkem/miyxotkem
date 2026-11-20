@@ -183,9 +183,13 @@ def gql(token, query, variables):
     return payload["data"]
 
 
-def local_hour(stamp):
+def local_time(stamp):
     t = datetime.datetime.fromisoformat(stamp.replace("Z", "+00:00"))
-    return t.astimezone(datetime.timezone(datetime.timedelta(hours=TZ_OFFSET))).hour
+    return t.astimezone(datetime.timezone(datetime.timedelta(hours=TZ_OFFSET)))
+
+
+def local_hour(stamp):
+    return local_time(stamp).hour
 
 
 def find_repos(token, user, personal, since):
@@ -352,17 +356,22 @@ def contribution_hours(token, user, personal):
     since = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=365)).strftime("%Y-%m-%dT%H:%M:%SZ")
     repos = find_repos(token, user, personal, since)
     hours, month_hours = [0] * 24, [0] * 24
+    week_hours = [[0] * 24 for _ in range(7)]  # Monday first, by local hour
     month_start = datetime.datetime.now(datetime.timezone.utc).replace(
         day=1, hour=0, minute=0, second=0, microsecond=0)  # UTC, like the calendar
 
     def tally(stamp):  # every commit counts for the year; this month's also go to month_hours
-        h = local_hour(stamp)
+        t = local_time(stamp)
+        h = t.hour
         hours[h] += 1
+        week_hours[t.weekday()][h] += 1
         if datetime.datetime.fromisoformat(stamp.replace("Z", "+00:00")) >= month_start:
             month_hours[h] += 1
 
     def tally_year(stamp):
-        hours[local_hour(stamp)] += 1
+        t = local_time(stamp)
+        hours[t.hour] += 1
+        week_hours[t.weekday()][t.hour] += 1
 
     def tally_month(stamp):
         month_hours[local_hour(stamp)] += 1
@@ -413,6 +422,7 @@ def contribution_hours(token, user, personal):
                           "repo": None if repo.get("isPrivate", True) else repo.get("name")}
     more["month_events"] = [[when(st).strftime("%Y-%m-%dT%H:%M:%SZ"), k] for st, k in events]
     more["extra_days"] = extra_days
+    more["week_hours"] = week_hours
     return hours, month_hours, more
 
 
@@ -573,6 +583,7 @@ def main():
         month_hours = [round(x / 9) for x in SAMPLE_HOURS]
         more = {"words": [["fix", 42], ["add", 37], ["update", 29], ["detection", 21], ["model", 18], ["refactor", 14]],
                 "words_include_private": False, "languages": [["Python", 120], ["C#", 70], ["TypeScript", 30]],
+                "week_hours": [[round(x * (1.3 if d < 5 else .6) / 9) for x in SAMPLE_HOURS] for d in range(7)],
                 "latest": {"at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
                            "repo": "sample-repo"}}
     elif token:
