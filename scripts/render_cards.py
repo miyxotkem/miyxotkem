@@ -377,10 +377,21 @@ def month_card(data):
 # colours. Checked for colour-blind separation (all pairs).
 WAFFLE_TYPES = {"commit": ("commit", "commits", ACCENT, "commits"),
                 "pr": ("pull request", "pull requests", INK, "pull_requests"),
-                "review": ("review", "reviews", COLORS["learn"], "reviews"),
+                "review": ("review", "reviews", "#6b8aa6", "reviews"),
                 "issue": ("issue", "issues", "#9c4428", "issues"),
-                "repo": ("new repo", "new repos", "#ddd5c7", "repos"),
+                "repo": ("new repo", "new repos", COLORS["learn"], "repos"),  # drawn as a star
                 "other": ("other", "other", "none", None)}  # drawn as an outline: time unknown
+
+
+def star(cx, cy, r, fill, extra=""):
+    """A five-pointed star centred on (cx, cy) with outer radius r."""
+    import math
+    pts = []
+    for i in range(10):
+        rad = r if i % 2 == 0 else r * 0.45
+        a = -math.pi / 2 + i * math.pi / 5
+        pts.append(f"{cx + rad*math.cos(a):.1f},{cy + rad*math.sin(a):.1f}")
+    return f'<polygon points="{" ".join(pts)}" fill="{fill}" stroke-linejoin="round"{extra}/>'
 
 
 def waffle_card(data):
@@ -420,6 +431,10 @@ def waffle_card(data):
                              f'fill="{MUTED}"/><text class="i"{at(.8)} x="{x+3:.1f}" y="{y0 + rows*pitch + 20:.1f}" '
                              f'font-family="{MONO}" font-size="10.5" fill="{MUTED}">{lt.day}</text>')
                 last_day = lt.day
+        if k == "repo":  # new repos are stars
+            b.append(f'<g class="d"{at(.1 + c*.025)}><title>{escape(tip)}</title>'
+                     f'{star(x + sz/2, y + sz/2 + .6, sz*0.62, WAFFLE_TYPES[k][2])}</g>')
+            continue
         outline = f' stroke="{GREY_BAR}" stroke-dasharray="2 2"' if k == "other" else ""
         b.append(f'<rect class="d"{at(.1 + c*.025)} x="{x:.1f}" y="{y:.1f}" width="{sz:.1f}" height="{sz:.1f}" '
                  f'rx="3" fill="{WAFFLE_TYPES[k][2]}"{outline}><title>{escape(tip)}</title></rect>')
@@ -438,7 +453,9 @@ def waffle_card(data):
         n = counts[k]
         cx = 44 + i*colw
         swatch = f' stroke="{GREY_BAR}" stroke-dasharray="2 2"' if k == "other" else ""
-        b.append(f'<g class="u"{at(.8 + i*.08)}><rect x="{cx:.1f}" y="{yl-10}" width="10" height="10" rx="2" fill="{col}"{swatch}/>'
+        mark = (star(cx + 5, yl - 4.5, 7, col) if k == "repo" else
+                f'<rect x="{cx:.1f}" y="{yl-10}" width="10" height="10" rx="2" fill="{col}"{swatch}/>')
+        b.append(f'<g class="u"{at(.8 + i*.08)}>{mark}'
                  f'<text x="{cx+18:.1f}" y="{yl}" font-family="{SANS}" font-size="14.5" fill="{INK_SOFT}">'
                  f'{escape(one if n == 1 else many)}</text>'
                  f'<text x="{cx:.1f}" y="{yl+34}" font-family="{SERIF}" font-size="32" fill="{INK}">{n:,}</text>')
