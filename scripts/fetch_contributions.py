@@ -8,6 +8,10 @@ month's, for comparison),
 plus your contributions from the last year (commits, pull requests, issues,
 reviews and new repositories) bucketed by local hour of day.
 
+Commits are read from every branch of every repo you can reach (your own,
+collaborations, organisations, forks), not only default branches; commits
+GitHub's own graph leaves out are added on top of its daily counts.
+
 Uses GitHub's GraphQL API with the token Actions provides (GITHUB_TOKEN).
 Standard library only, so the workflow needs no pip install.
 
@@ -50,15 +54,65 @@ query($login: String!) {
 }
 """
 
-HISTORY = """
+# Every branch of a repo, newest first, each with your commits from the last year.
+BRANCHES = """
 query($owner: String!, $name: String!, $uid: ID!, $since: GitTimestamp!, $after: String) {
   repository(owner: $owner, name: $name) {
-    defaultBranchRef { target { ... on Commit {
+    isFork
+    defaultBranchRef { name }
+    refs(refPrefix: "refs/heads/", first: 50, after: $after,
+         orderBy: {field: TAG_COMMIT_DATE, direction: DESC}) {
+      pageInfo { hasNextPage endCursor }
+      nodes { name target { ... on Commit {
+        committedDate
+        history(first: 100, since: $since, author: {id: $uid}) {
+          pageInfo { hasNextPage endCursor }
+          nodes { oid authoredDate messageHeadline }
+        }
+      } } }
+    }
+  }
+}
+"""
+
+# More of one branch's history, when a branch has over 100 of your commits.
+BRANCH_HISTORY = """
+query($owner: String!, $name: String!, $ref: String!, $uid: ID!, $since: GitTimestamp!, $after: String) {
+  repository(owner: $owner, name: $name) {
+    ref(qualifiedName: $ref) { target { ... on Commit {
       history(first: 100, after: $after, since: $since, author: {id: $uid}) {
         pageInfo { hasNextPage endCursor }
-        nodes { authoredDate messageHeadline }
+        nodes { oid authoredDate messageHeadline }
       }
     } } }
+  }
+}
+"""
+
+# Every repo you can push to or belong to (yours, collaborations, organisations),
+# most recently pushed first. Needs your own token: it asks as "viewer".
+MY_REPOS = """
+query($after: String) {
+  viewer {
+    repositories(first: 100, after: $after,
+                 affiliations: [OWNER, COLLABORATOR, ORGANIZATION_MEMBER],
+                 ownerAffiliations: [OWNER, COLLABORATOR, ORGANIZATION_MEMBER],
+                 orderBy: {field: PUSHED_AT, direction: DESC}) {
+      pageInfo { hasNextPage endCursor }
+      nodes { name owner { login } isPrivate pushedAt primaryLanguage { name } }
+    }
+  }
+}
+"""
+
+# Other people's repos you contributed to (commits, PRs, reviews).
+CONTRIBUTED = """
+query($login: String!) {
+  user(login: $login) {
+    repositoriesContributedTo(first: 100, includeUserRepositories: true,
+                              contributionTypes: [COMMIT, PULL_REQUEST, PULL_REQUEST_REVIEW, REPOSITORY]) {
+      nodes { name owner { login } isPrivate pushedAt primaryLanguage { name } }
+    }
   }
 }
 """
@@ -130,29 +184,98 @@ def local_hour(stamp):
     return t.astimezone(datetime.timezone(datetime.timedelta(hours=TZ_OFFSET))).hour
 
 
-def commit_hours(token, uid, repos, tally, on_commit=None):
-    """Add your commits from the last year to hours, by local hour of day (0-23)."""
-    since = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=365)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    for r in repos:
+def find_repos(token, user, personal, since):
+    """Every repo worth scanning: the ones GitHub credits you with, all your own,
+    collaborations and organisation repos, and repos you contributed to."""
+    found = [x["repository"] for x in user["contributionsCollection"]["commitContributionsByRepository"]]
+    found += user["repositories"]["nodes"]
+    if personal:  # viewer queries need your own token, not the Actions one
         after = None
-        for _ in range(10):  # at most 1,000 commits per repo
+        for _ in range(5):  # up to 500 repos, newest pushes first
             try:
-                data = gql(token, HISTORY, {"owner": r["owner"]["login"], "name": r["name"],
-                                            "uid": uid, "since": since, "after": after})
+                page = gql(token, MY_REPOS, {"after": after})["viewer"]["repositories"]
+            except Exception as e:
+                print(f"skip repo list: {e}", file=sys.stderr)
+                break
+            fresh = [r for r in page["nodes"] if (r.get("pushedAt") or "") >= since]
+            found += fresh
+            if len(fresh) < len(page["nodes"]) or not page["pageInfo"]["hasNextPage"]:
+                break
+            after = page["pageInfo"]["endCursor"]
+        try:
+            found += gql(token, CONTRIBUTED, {"login": USERNAME})["user"]["repositoriesContributedTo"]["nodes"]
+        except Exception as e:
+            print(f"skip contributed repos: {e}", file=sys.stderr)
+    repos, seen = [], set()
+    for r in found:
+        key = (r["owner"]["login"].lower(), r["name"].lower())
+        if key not in seen and (r.get("pushedAt") is None or r["pushedAt"] >= since):
+            seen.add(key)
+            repos.append(r)
+    return repos
+
+
+def scan_commits(token, uid, repos, since):
+    """Your commits from the last year on every branch of every repo, once each
+    (keyed by commit id). A commit is "counted" when GitHub's own graph already
+    includes it: it sits on the default branch or gh-pages of a repo that is
+    not a fork. Everything else (feature branches, forks) is extra."""
+    commits = {}
+
+    def add(r, nodes, counted):
+        for n in nodes:
+            c = commits.setdefault(n["oid"], {"at": n["authoredDate"], "head": n.get("messageHeadline") or "",
+                                              "repo": r, "counted": False})
+            c["counted"] = c["counted"] or counted
+
+    for r in repos:
+        owner, name = r["owner"]["login"], r["name"]
+        after = None
+        for _ in range(6):  # up to 300 branches per repo
+            try:
+                data = gql(token, BRANCHES, {"owner": owner, "name": name, "uid": uid,
+                                             "since": since, "after": after})
             except Exception as e:  # an empty or inaccessible repo shouldn't sink the whole run
-                print(f"skip {r['name']}: {e}", file=sys.stderr)
+                print(f"skip {name}: {e}", file=sys.stderr)
                 break
-            ref = (data.get("repository") or {}).get("defaultBranchRef")
-            if not ref:
+            repo = data.get("repository")
+            if not repo:
                 break
-            hist = ref["target"]["history"]
-            for n in hist["nodes"]:
-                tally(n["authoredDate"])
-                if on_commit:
-                    on_commit(r, n)
-            if not hist["pageInfo"]["hasNextPage"]:
+            default = (repo.get("defaultBranchRef") or {}).get("name")
+            stale = False
+            for ref in repo["refs"]["nodes"]:
+                t = ref.get("target") or {}
+                if "history" not in t:
+                    continue
+                if (t.get("committedDate") or "") < since:
+                    stale = True  # branches come newest first, so the rest are older still
+                    break
+                counted = not repo["isFork"] and ref["name"] in (default, "gh-pages")
+                hist = t["history"]
+                add(r, hist["nodes"], counted)
+                cursor = hist["pageInfo"]["endCursor"] if hist["pageInfo"]["hasNextPage"] else None
+                for _ in range(10):  # a long branch: page through the rest
+                    if not cursor:
+                        break
+                    try:
+                        more = gql(token, BRANCH_HISTORY, {"owner": owner, "name": name, "uid": uid,
+                                                           "ref": "refs/heads/" + ref["name"],
+                                                           "since": since, "after": cursor})
+                        h = more["repository"]["ref"]["target"]["history"]
+                    except Exception as e:
+                        print(f"skip rest of {name}@{ref['name']}: {e}", file=sys.stderr)
+                        break
+                    add(r, h["nodes"], counted)
+                    cursor = h["pageInfo"]["endCursor"] if h["pageInfo"]["hasNextPage"] else None
+            if stale or not repo["refs"]["pageInfo"]["hasNextPage"]:
                 break
-            after = hist["pageInfo"]["endCursor"]
+            after = repo["refs"]["pageInfo"]["endCursor"]
+    return commits
+
+
+def local_date(stamp):
+    t = datetime.datetime.fromisoformat(stamp.replace("Z", "+00:00"))
+    return t.astimezone(datetime.timezone(datetime.timedelta(hours=TZ_OFFSET))).date().isoformat()
 
 
 def event_hours(token, tally, window=None, found=None):
@@ -177,16 +300,10 @@ def event_hours(token, tally, window=None, found=None):
             after = page["pageInfo"]["endCursor"]
 
 
-def contribution_hours(token, user):
+def contribution_hours(token, user, personal):
     """Count your contributions from the last year by local hour of day (0-23)."""
-    # Repos you committed to this year (including other people's), plus your own.
-    repos, seen = [], set()
-    by_repo = user["contributionsCollection"]["commitContributionsByRepository"]
-    for r in [x["repository"] for x in by_repo] + user["repositories"]["nodes"]:
-        key = (r["owner"]["login"].lower(), r["name"].lower())
-        if key not in seen:
-            seen.add(key)
-            repos.append(r)
+    since = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=365)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    repos = find_repos(token, user, personal, since)
     hours, month_hours = [0] * 24, [0] * 24
     month_start = datetime.datetime.now(datetime.timezone.utc).replace(
         day=1, hour=0, minute=0, second=0, microsecond=0)  # UTC, like the calendar
@@ -203,8 +320,19 @@ def contribution_hours(token, user):
     def tally_month(stamp):
         month_hours[local_hour(stamp)] += 1
 
+    scanned = scan_commits(token, user["id"], repos, since)
     commits = []  # (repo, commit) pairs, for the words and status cards
-    commit_hours(token, user["id"], repos, tally, lambda r, n: commits.append((r, n)))
+    for c in scanned.values():
+        tally(c["at"])
+        commits.append((c["repo"], {"authoredDate": c["at"], "messageHeadline": c["head"]}))
+    # commits GitHub's graph leaves out (other branches, forks), by local day
+    extra_days = {}
+    for c in scanned.values():
+        if not c["counted"]:
+            day = local_date(c["at"])
+            extra_days[day] = extra_days.get(day, 0) + 1
+    print(f"scanned {len(repos)} repos: {len(scanned)} commits, "
+          f"{sum(extra_days.values())} only on other branches or forks", file=sys.stderr)
     # The default (last-year) event lists can miss the newest few items, so
     # this month's events come from a query bounded to this month.
     event_hours(token, tally_year)
@@ -228,6 +356,7 @@ def contribution_hours(token, user):
         more["latest"] = {"at": st, "kind": k,
                           "repo": None if repo.get("isPrivate", True) else repo.get("name")}
     more["month_events"] = [[when(st).strftime("%Y-%m-%dT%H:%M:%SZ"), k] for st, k in events]
+    more["extra_days"] = extra_days
     return hours, month_hours, more
 
 
@@ -313,14 +442,18 @@ def sample_month():
             "prev": {"month": m0, "counts": {"commits": 170, "pull_requests": 14, "reviews": 11, "issues": 4, "repos": 2, "private": 12}}}
 
 
-def fetch(token):
+def fetch(token, personal=False):
     user = gql(token, CALENDAR, {"login": USERNAME})["user"]
     weeks = user["contributionsCollection"]["contributionCalendar"]["weeks"]
     days = [
         {"date": d["date"], "count": d["contributionCount"], "level": LEVELS.get(d["contributionLevel"], 0)}
         for w in weeks for d in w["contributionDays"]
     ]
-    return (days, *contribution_hours(token, user))  # days, hours, month_hours, extras
+    hours, month_hours, more = contribution_hours(token, user, personal)
+    # GitHub's graph only counts commits on default branches; add the rest
+    for d in days:
+        d["count"] += more["extra_days"].get(d["date"], 0)
+    return days, hours, month_hours, more
 
 
 # Roughly your real shape (from the old productive-time card), for offline previews.
@@ -387,8 +520,12 @@ def main():
                 "latest": {"at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
                            "repo": "sample-repo"}}
     elif token:
-        days, hours, month_hours, more = fetch(token)
+        days, hours, month_hours, more = fetch(token, bool(personal))
         month = month_counts(token)
+        if month:  # commits only on other branches or forks count too
+            extra = more.get("extra_days", {})
+            for part in (month, month["prev"]):
+                part["counts"]["commits"] += sum(v for k, v in extra.items() if k.startswith(part["month"]))
     else:
         sys.exit("GITHUB_TOKEN not set (use --sample for demo data)")
 
