@@ -622,9 +622,9 @@ def rise_card(data):
              f'<text x="{bx + 24}" y="{ltop - 14}" font-family="{MONO}" font-size="10.5" fill="{MUTED}">'
              f'RUNNING TOTAL</text></g>')
 
-    rows = [(f'{cur/usual:.0f}<tspan font-style="italic" fill="{ACCENT}">×</tspan>', f"my usual month ({usual:g})"),
-            (f'{since}<tspan fill="{ACCENT}">%</tspan>', f"of my year came since 1 {turn_name}"),
-            (f'<tspan fill="{ACCENT}">+</tspan>{round(100*(cur-prev)/prev)}<tspan fill="{ACCENT}">%</tspan>', f"on all of {pname}, already")]
+    rows = [(f'{cur/usual:.0f}<tspan font-style="italic">×</tspan>', f"my usual month ({usual:g})"),
+            (f'{since}<tspan fill="{MUTED}">%</tspan>', f"of my year came since 1 {turn_name}"),
+            (f'+{round(100*(cur-prev)/prev)}<tspan fill="{MUTED}">%</tspan>', f"on all of {pname}, already")]
     for i, (big, sub) in enumerate(rows):
         y = 124 + i*118
         b.append(f'<g class="u"{at(.5 + i*.15)}><text x="640" y="{y}" font-family="{SERIF}" font-size="44" '
@@ -821,12 +821,12 @@ def readme_block(data):
         # who I am: intro and status, then what I work on
         f'<a href="{LINK_URL}">{img("hero.svg", f"{FIRST} {LAST}. {EYEBROW.capitalize()}.")}</a><br>',
         "".join(img(f"{t[0]}.svg", f"{t[1]}: {t[3]} {t[4]}", third) for t in TILES) + "<br>",
-        # the year: every day, month by month, then the days and hours I keep
+        # the year: every day, then month by month
         img("heatmap.svg", f"Contribution graph for the year, January to December, in {ACCENT_WORD}, with the year's totals") + "<br>",
         img("rise.svg", "Contributions month by month, with the running total for the year") + "<br>",
-        img("week.svg", "When I work: contributions by weekday and hour of day") + "<br>",
-        # this month, zooming in: day by day, by type, in words
+        # this month, zooming in: day by day, when I work, by type, in words
         img("month.svg", "This month: contributions by day") + "<br>",
+        img("week.svg", "When I work: contributions by weekday and hour of day") + "<br>",
         img("waffle.svg", "This month, one square per contribution, coloured by type, in order") + "<br>",
         img("words.svg", "Most used words in this month's commit messages"),
         "</div>",
