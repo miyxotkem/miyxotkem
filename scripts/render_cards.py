@@ -599,117 +599,95 @@ def tile(i, label, key, big, word, blurb):
     return svg(TILE_W, h, "".join(b), ["serif", "serif-i", "sans", "mono"], f"{label}: {big} {word}. {blurb}")
 
 
-# ---- contributions-by-hour card ---------------------------------------------
-def smooth_path(pts, floor=None):
-    """Catmull-Rom curve through pts as SVG cubic beziers; control points are
-    kept above floor so the curve never dips below the baseline."""
-    p = f"M{pts[0][0]:.1f},{pts[0][1]:.1f}"
-    for i in range(len(pts) - 1):
-        p0, p1, p2, p3 = pts[max(i-1, 0)], pts[i], pts[i+1], pts[min(i+2, len(pts)-1)]
-        c1 = [p1[0] + (p2[0]-p0[0])/6, p1[1] + (p2[1]-p0[1])/6]
-        c2 = [p2[0] - (p3[0]-p1[0])/6, p2[1] - (p3[1]-p1[1])/6]
-        if floor is not None:
-            c1[1], c2[1] = min(c1[1], floor), min(c2[1], floor)
-        p += f" C{c1[0]:.1f},{c1[1]:.1f} {c2[0]:.1f},{c2[1]:.1f} {p2[0]:.1f},{p2[1]:.1f}"
-    return p
+# ---- when I work: weekday x hour ---------------------------------------------
+WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+PARTS = {"late nights": [22, 23, 0, 1, 2, 3, 4], "mornings": [5, 6, 7, 8, 9, 10, 11],
+         "afternoons": [12, 13, 14, 15, 16, 17], "evenings": [18, 19, 20, 21]}
 
 
 def hour_label(h):
     return f"{h % 12 or 12} {'am' if h < 12 else 'pm'}"
 
 
-def hours_card(data, monthly=False):
-    hours = data["month_hours"] if monthly else data["hours"]
+def week_grid(data):
+    """7 x 24 counts (Monday first, local hours) and the span they cover.
+    The year's grid comes from the fetch script; until it has run once, the
+    card falls back to this month's timed contributions."""
+    if data.get("week_hours"):
+        return data["week_hours"], "PAST YEAR", "in the last year"
+    tz = datetime.timezone(datetime.timedelta(hours=data.get("tz_offset", 7)))
+    ym = data["days"][-1]["date"][:7]
+    grid = [[0] * 24 for _ in range(7)]
+    for stamp, _ in data.get("month_events") or []:
+        t = datetime.datetime.fromisoformat(stamp.replace("Z", "+00:00")).astimezone(tz)
+        if t.strftime("%Y-%m") == ym:
+            grid[t.weekday()][t.hour] += 1
+    mname = datetime.date.fromisoformat(ym + "-01").strftime("%B")
+    return grid, mname.upper(), f"in {mname} so far"
+
+
+def week_card(data):
+    grid, span_tag, span = week_grid(data)
     tz = data.get("tz_offset", 7)
-    priv = data.get("includes_private", False)
-    pub = "" if priv else "public "
-    ref = datetime.date.fromisoformat(data["days"][-1]["date"])
-    mname = ref.strftime("%B")
-    # Bars and percentages come from contributions with a known time; the total
-    # shown is the calendar's, so it matches the other cards. (GitHub counts a
-    # few contributions whose time the API doesn't expose.)
-    timed = sum(hours)
-    if priv:
-        total = (next((x["count"] for x in data["stats"]["monthly"] if x["month"] == ref.strftime("%Y-%m")), timed)
-                 if monthly else data["stats"]["total"])
-    else:
-        total = timed
-    span = f"in {mname} so far" if monthly else "in the last year"
-    h = 352
-    b = [card(W, h)]
     tzs = f"UTC{'+' if tz >= 0 else '-'}{abs(tz)}"
+    total = sum(map(sum, grid))
+    h = 372
+    b = [card(W, h)]
     b.append(f'<text class="u" x="44" y="62" font-family="{MONO}" font-size="12" letter-spacing="1.8" '
-             f'fill="{INK_SOFT}">{pub.upper()}CONTRIBUTIONS BY HOUR OF DAY · {mname.upper() + " · " if monthly else ""}{tzs}</text>')
+             f'fill="{INK_SOFT}">WHEN I WORK · {span_tag} · {tzs}</text>')
 
-    groups = {"night": [22, 23, 0, 1, 2, 3, 4], "morning": [5, 6, 7, 8, 9, 10, 11],
-              "day": [12, 13, 14, 15, 16, 17], "evening": [18, 19, 20, 21]}
-    names = {"night": ("Mostly a", "night owl"), "morning": ("Mostly an", "early bird"),
-             "day": ("Mostly a", "daytime coder"), "evening": ("Mostly an", "evening coder")}
-    top = max(groups, key=lambda g: sum(hours[x] for x in groups[g]))
-    lead, word = names[top] if timed else ("Waiting for", "contributions")
-    b.append(f'<text class="u"{at(.1)} x="40" y="122" font-family="{SERIF}" font-size="66" letter-spacing="-1" '
-             f'fill="{INK}">{lead} <tspan font-style="italic" fill="{ACCENT}">{word}</tspan></text>')
+    # the headline: weekdays or weekends (per day, so 5 vs 2 is fair), and the busiest part of the day
+    wk, we = sum(sum(r) for r in grid[:5]), sum(sum(r) for r in grid[5:])
+    part = max(PARTS, key=lambda p: sum(r[x] for r in grid for x in PARTS[p]) / len(PARTS[p]))  # per hour
+    if wk / 5 >= we / 2:
+        days_word = "weeknight" if part in ("evenings", "late nights") else "weekday"
+    else:
+        days_word = "weekend"
+    phrase = f"{days_word} {part}" if total else "contributions"
+    lead = "Mostly" if total else "Waiting for"
+    fs = min(60, 560 / (len(f"{lead} {phrase}") * 0.37))
+    b.append(f'<text class="u"{at(.1)} x="40" y="122" font-family="{SERIF}" font-size="{fs:.0f}" letter-spacing="-1" '
+             f'fill="{INK}">{lead} <tspan font-style="italic" fill="{ACCENT}">{phrase}</tspan></text>')
 
-    peak_h = max(range(24), key=lambda x: hours[x])
-    peak = max(hours + [1])
-    bx, bw, base, ceil = 44, 548, h - GAP - 44, 160
-    step = bw / 23
-    # soft band behind the night hours (10 pm to 5 am)
-    for x0, x1 in ((0, 5), (22, 23)):
-        b.append(f'<rect class="i" x="{bx + x0*step:.1f}" y="{ceil-6}" width="{(x1-x0)*step:.1f}" '
-                 f'height="{base-ceil+6}" fill="{EMPTY}" opacity=".55"/>')
-    b.append(f'<text class="i"{at(.3)} x="{bx + 2.5*step:.1f}" y="{ceil+8}" text-anchor="middle" '
-             f'font-family="{MONO}" font-size="10" letter-spacing="1.5" fill="{MUTED}">NIGHT</text>')
-    # a smooth curve through the 24 hours, with a soft fill under it
-    pts = [(bx + i*step, base - c / peak * (base - ceil - 22)) for i, c in enumerate(hours)]
-    line = smooth_path(pts, floor=base)
-    b.append(f'<defs><linearGradient id="hg" x1="0" y1="0" x2="0" y2="1">'
-             f'<stop offset="0" stop-color="{ACCENT}" stop-opacity=".42"/>'
-             f'<stop offset="1" stop-color="{ACCENT}" stop-opacity="0"/></linearGradient></defs>')
-    b.append(f'<path class="i"{at(.9)} d="{line} L{pts[-1][0]:.1f},{base} L{pts[0][0]:.1f},{base}Z" fill="url(#hg)"/>')
-    b.append(f'<rect x="{bx}" y="{base}" width="{bw}" height="1" fill="{RULE}"/>')
-    b.append(f'<path class="draw"{at(.3)} d="{line}" pathLength="1" fill="none" stroke="{INK}" stroke-width="2" '
-             f'stroke-linejoin="round" stroke-linecap="round"/>')
-    for i, c in enumerate(hours):  # invisible hover targets, one per hour
-        b.append(f'<rect x="{bx + (i-.5)*step:.1f}" y="{ceil}" width="{step:.1f}" height="{base-ceil}" fill="transparent">'
-                 f'<title>{c} contributions at {hour_label(i)}</title></rect>')
-    if hours[peak_h]:
-        px, py = pts[peak_h]
-        # dashed drop line from the peak to the axis, with the hour written underneath
-        b.append(f'<path class="i"{at(1.3)} d="M{px:.1f},{py+7:.1f} L{px:.1f},{base}" stroke="{ACCENT}" '
-                 f'stroke-width="1.5" stroke-dasharray="3 3" fill="none"/>')
-        b.append(f'<text class="i"{at(1.4)} x="{px:.1f}" y="{base+22}" text-anchor="middle" font-family="{MONO}" '
-                 f'font-size="11.5" fill="{ACCENT}">{peak_h:02d}</text>')
-        b.append(f'<circle class="d"{at(1.4)} cx="{px:.1f}" cy="{py:.1f}" r="6" fill="{ACCENT}" '
-                 f'stroke="{PAPER}" stroke-width="2"/>')
-        b.append(f'<text class="i"{at(1.5)} x="{px:.1f}" y="{py-14:.1f}" text-anchor="middle" '
-                 f'font-family="{MONO}" font-size="11.5" fill="{ACCENT}">{hours[peak_h]}</text>')
-    for i in (0, 6, 12, 18, 23):
-        if hours[peak_h] and abs(i - peak_h) < 2:
-            continue  # the peak's own label sits here
-        b.append(f'<text class="i"{at(.8)} x="{bx + i*step:.1f}" y="{base+22}" text-anchor="middle" '
-                 f'font-family="{MONO}" font-size="11" fill="{MUTED}">{i:02d}</text>')
+    # the grid, shaded like the heatmap, with a rule between weekdays and the weekend
+    nz = sorted(c for r in grid for c in r if c)
+    cuts = [nz[int(len(nz) * q)] for q in (.2, .45, .7, .9)] if nz else [1, 2, 3, 4]
+    gx, gy, step = 88, 154, 21.6
+    cell = step * .8
+    for d in range(7):
+        b.append(f'<text class="i"{at(.2)} x="{gx-12}" y="{gy + d*step + cell*.75:.1f}" text-anchor="end" '
+                 f'font-family="{MONO}" font-size="11" fill="{MUTED}">{WEEKDAYS[d][:3]}</text>')
+        for x in range(24):
+            c = grid[d][x]
+            b.append(f'<rect class="d"{at(.3 + x*.025 + d*.02)} x="{gx + x*step:.1f}" y="{gy + d*step:.1f}" '
+                     f'width="{cell:.1f}" height="{cell:.1f}" rx="3" fill="{SHADES[level_of(c, cuts)]}">'
+                     f'<title>{c} on {WEEKDAYS[d]}s at {hour_label(x)}</title></rect>')
+    b.append(f'<rect class="i"{at(.9)} x="{gx-4}" y="{gy + 5*step - step*.1:.1f}" width="{24*step:.1f}" '
+             f'height="1" fill="{RULE}"/>')
+    for x in (0, 6, 12, 18, 23):
+        b.append(f'<text class="i"{at(.8)} x="{gx + x*step + cell/2:.1f}" y="{gy + 7*step + 16:.1f}" '
+                 f'text-anchor="middle" font-family="{MONO}" font-size="11" fill="{MUTED}">{x:02d}</text>')
 
+    # three numbers on the right, laid out like the other stat columns
+    bd, bh = max(((d, x) for d in range(7) for x in range(24)), key=lambda p: grid[p[0]][p[1]])
+    best_day = max(range(7), key=lambda d: sum(grid[d]))
+    weekend = round(100 * we / total) if total else 0
+    num, ampm = hour_label(bh).split()
+    rows = [(f'{WEEKDAYS[bd][:3]} {num} <tspan font-style="italic">{ampm}</tspan>',
+             f"busiest hour, {grid[bd][bh]} contributions"),
+            (WEEKDAYS[best_day], "my busiest day of the week"),
+            (f'{weekend}<tspan fill="{MUTED}">%</tspan>', "on weekends")]
     rx = 640
-    after6 = round(100 * sum(hours[18:]) / timed) if timed else 0
-    rows = [
-        (f'{hour_label(peak_h).split()[0]} <tspan font-style="italic">{hour_label(peak_h).split()[1]}</tspan>',
-         "my busiest hour"),
-        (f'{after6}<tspan fill="{MUTED}">%</tspan>', "of contributions after 6 pm"),
-        (f'{total:,}', f"in {mname} so far" if monthly else f"{pub}contributions, past year"),
-    ]
     for i, (big, sub) in enumerate(rows):
-        y = 102 + i*97  # number baseline; divider sits midway between rows
+        y = 104 + i*97
         b.append(f'<g class="u"{at(.5 + i*.15)}><text x="{rx}" y="{y}" font-family="{SERIF}" font-size="44" '
-                 f'letter-spacing="-.5" fill="{INK}">{big}</text>'
-                 f'<text x="{rx+1}" y="{y+25}" font-family="{SANS}" font-size="14.5" fill="{INK_SOFT}">'
-                 f'{escape(sub)}</text></g>')
+                 f'letter-spacing="-.5" fill="{INK}">{big}</text><text x="{rx+1}" y="{y+25}" font-family="{SANS}" '
+                 f'font-size="14.5" fill="{INK_SOFT}">{escape(sub)}</text></g>')
         if i < 2:
             b.append(f'<rect class="i"{at(.7 + i*.15)} x="{rx}" y="{y+48}" width="196" height="1" fill="{RULE}"/>')
-    label = (f"{pub.capitalize() or 'C'}{'ontributions' if priv else 'contributions'} by hour of day ({tzs}): "
-             f"{lead} {word}. Busiest hour {hour_label(peak_h)}, "
-             f"{after6}% after 6 pm, {total} {pub}contributions {span}."
-             + ("" if priv else " Private repos are not counted."))
+    label = (f"When I work, by weekday and hour ({tzs}), {span}: {lead} {phrase}. "
+             f"Busiest hour {WEEKDAYS[bd]} {hour_label(bh)}, busiest day {WEEKDAYS[best_day]}, "
+             f"{weekend}% on weekends, {total} contributions with a known time.")
     return svg(W, h, "".join(b), ["serif", "serif-i", "sans", "mono"], label)
 
 
@@ -778,10 +756,9 @@ def readme_block(data):
         # who I am: intro and status, then what I work on
         f'<a href="{LINK_URL}">{img("hero.svg", f"{FIRST} {LAST}. {EYEBROW.capitalize()}.")}</a><br>',
         "".join(img(f"{t[0]}.svg", f"{t[1]}: {t[3]} {t[4]}", third) for t in TILES) + "<br>",
-        # the year: every day, then the hours I keep
+        # the year: every day, then the days and hours I keep
         img("heatmap.svg", f"Contribution graph, in {ACCENT_WORD}, refreshed hourly, with the year's totals") + "<br>",
-        img("hours.svg", "Contributions by hour of day" if data.get("includes_private")
-            else "Public contributions by hour of day (private repos not counted)") + "<br>",
+        img("week.svg", "When I work: contributions by weekday and hour of day") + "<br>",
         # this month, zooming in: total, by type, against last month, in words
         img("month.svg", "This month: contributions by day") + "<br>",
         img("waffle.svg", "This month, one square per contribution, coloured by type, in order") + "<br>",
@@ -821,7 +798,7 @@ def main():
         write(f"pace{sfx}.svg", pace_card(data))
         for i, t in enumerate(TILES):
             write(f"{t[0]}{sfx}.svg", tile(i, *t[1:]))
-        write(f"hours{sfx}.svg", hours_card(data))
+        write(f"week{sfx}.svg", week_card(data))
         write(f"words{sfx}.svg", words_card(data))
     # footer links have a transparent background, so one version serves both themes
     use_theme("light")
