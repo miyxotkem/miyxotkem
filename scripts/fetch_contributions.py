@@ -212,7 +212,9 @@ it its this that these those some more less when then than not no yes so up down
 use using used new old all any each per vs my our your their i we you he she they them me us
 merge merged pull request requests branch main master skip ci wip co authored signed off
 và của các cho được là với khi để một những này có không từ vào ra đã sẽ thì cũng hơn nhiều sau
-trước bằng lại đến như mới trong theo nên rồi thêm bị đó lúc nào gì hay vẫn chỉ đang mà về trên dưới
+trước bằng lại đến như mới trong theo nên rồi thêm bị đó lúc nào gì hay vẫn chỉ đang mà về trên dưới vì
+va cua cac duoc la voi khi de mot nhung nay co khong tu vao da se thi cung hon nhieu truoc bang lai den
+nhu moi nen roi them bi luc nao gi van chi dang ma ve tren duoi vi
 """.split())
 
 
@@ -221,7 +223,7 @@ def words_of(headline):
     # letters in any script (so Vietnamese words stay whole), plus + # . - inside a word
     for w in re.findall(r"[^\W\d_][\w+#.\-]*", headline.lower()):
         w = w.strip(".-")
-        if len(w) >= 2 and w not in STOPWORDS:
+        if len(w) >= 2 and w not in STOPWORDS and not any(ch.isdigit() for ch in w):  # skip ids like se100-2026
             out.append(w)
     return out
 
