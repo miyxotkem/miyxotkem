@@ -710,9 +710,14 @@ def week_card(data):
     # the grid, shaded like the heatmap, with a rule between weekdays and the weekend
     nz = sorted(c for r in grid for c in r if c)
     cuts = [nz[int(len(nz) * q)] for q in (.2, .45, .7, .9)] if nz else [1, 2, 3, 4]
-    b.append(f'<text class="u"{at(.2)} x="44" y="156" font-family="{SANS}" font-size="14.5" fill="{INK_SOFT}">'
-             f'Each square is an hour of the week, shaded by contributions {span}.</text>')
     gx, gy, step = 88, 184, 21.6
+    # the colour key, like the heatmap's: right-aligned over the grid
+    kx = gx + 24*step - 2.6 - 6*14 - 30
+    b.append(f'<g class="i"{at(.2)}><text x="{kx-8:.1f}" y="164" text-anchor="end" font-family="{MONO}" '
+             f'font-size="11" fill="{MUTED}">less</text>')
+    for i, c in enumerate(SHADES):
+        b.append(f'<rect x="{kx + i*14:.1f}" y="155" width="10" height="10" rx="2" fill="{c}"/>')
+    b.append(f'<text x="{kx + 6*14 + 2:.1f}" y="164" font-family="{MONO}" font-size="11" fill="{MUTED}">more</text></g>')
     cell = step * .8
     for d in range(7):
         b.append(f'<text class="i"{at(.2)} x="{gx-12}" y="{gy + d*step + cell*.75:.1f}" text-anchor="end" '
