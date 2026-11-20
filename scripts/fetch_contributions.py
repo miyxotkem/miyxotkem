@@ -54,7 +54,7 @@ query($owner: String!, $name: String!, $uid: ID!, $since: GitTimestamp!, $after:
     defaultBranchRef { target { ... on Commit {
       history(first: 100, after: $after, since: $since, author: {id: $uid}) {
         pageInfo { hasNextPage endCursor }
-        nodes { authoredDate }
+        nodes { authoredDate committedDate }
       }
     } } }
   }
@@ -121,7 +121,7 @@ def local_hour(stamp):
     return t.astimezone(datetime.timezone(datetime.timedelta(hours=TZ_OFFSET))).hour
 
 
-def commit_hours(token, uid, repos, tally):
+def commit_hours(token, uid, repos, tally, seen_commits):
     """Add your commits from the last year to hours, by local hour of day (0-23)."""
     since = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=365)).strftime("%Y-%m-%dT%H:%M:%SZ")
     for r in repos:
@@ -138,7 +138,8 @@ def commit_hours(token, uid, repos, tally):
                 break
             hist = ref["target"]["history"]
             for n in hist["nodes"]:
-                tally(n["authoredDate"])
+                tally(n["authoredDate"], n)
+                seen_commits.setdefault((r["owner"]["login"] + "/" + r["name"]).lower(), []).append(n)
             if not hist["pageInfo"]["hasNextPage"]:
                 break
             after = hist["pageInfo"]["endCursor"]
@@ -176,15 +177,50 @@ def contribution_hours(token, user):
     month_start = datetime.datetime.now(datetime.timezone.utc).replace(
         day=1, hour=0, minute=0, second=0, microsecond=0)  # UTC, like the calendar
 
-    def tally(stamp):  # every contribution counts for the year; this month's also go to month_hours
+    def tally(stamp, _=None):  # every contribution counts for the year; this month's also go to month_hours
         h = local_hour(stamp)
         hours[h] += 1
         if datetime.datetime.fromisoformat(stamp.replace("Z", "+00:00")) >= month_start:
             month_hours[h] += 1
 
-    commit_hours(token, user["id"], repos, tally)
+    seen_commits = {}
+    commit_hours(token, user["id"], repos, tally, seen_commits)
     event_hours(token, tally)
+    explain_commit_gap(token, month_start, seen_commits)
     return hours, month_hours
+
+
+MONTH_COMMITS = """
+query($login: String!, $from: DateTime!, $to: DateTime!) {
+  user(login: $login) { contributionsCollection(from: $from, to: $to) {
+    commitContributionsByRepository(maxRepositories: 100) {
+      repository { nameWithOwner } contributions { totalCount }
+    }
+  } }
+}
+"""
+
+
+def explain_commit_gap(token, month_start, seen_commits):
+    """Log, per repo (unnamed: this log is public), where GitHub's commit count
+    for this month differs from the commits the by-hour chart found."""
+    try:
+        now = datetime.datetime.now(datetime.timezone.utc)
+        rows = gql(token, MONTH_COMMITS, {"login": USERNAME, "from": month_start.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                                          "to": now.strftime("%Y-%m-%dT%H:%M:%SZ")}
+                   )["user"]["contributionsCollection"]["commitContributionsByRepository"]
+    except Exception as e:
+        print(f"commit gap check skipped: {e}", file=sys.stderr)
+        return
+    when = lambda st: datetime.datetime.fromisoformat(st.replace("Z", "+00:00"))
+    for i, r in enumerate(rows):
+        nodes = seen_commits.get(r["repository"]["nameWithOwner"].lower())
+        gh = r["contributions"]["totalCount"]
+        by_author = sum(1 for n in nodes or [] if when(n["authoredDate"]) >= month_start)
+        by_commit = sum(1 for n in nodes or [] if when(n["committedDate"]) >= month_start)
+        if nodes is None or gh != by_author:
+            print(f"commit gap: repo #{i+1}: github {gh}, chart {by_author} by author date, "
+                  f"{by_commit} by commit date{'' if nodes is not None else ', repo not scanned'}")
 
 
 def month_bounds():
