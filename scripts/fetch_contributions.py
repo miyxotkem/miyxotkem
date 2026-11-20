@@ -121,7 +121,7 @@ def local_hour(stamp):
     return t.astimezone(datetime.timezone(datetime.timedelta(hours=TZ_OFFSET))).hour
 
 
-def commit_hours(token, uid, repos, hours):
+def commit_hours(token, uid, repos, tally):
     """Add your commits from the last year to hours, by local hour of day (0-23)."""
     since = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=365)).strftime("%Y-%m-%dT%H:%M:%SZ")
     for r in repos:
@@ -138,13 +138,13 @@ def commit_hours(token, uid, repos, hours):
                 break
             hist = ref["target"]["history"]
             for n in hist["nodes"]:
-                hours[local_hour(n["authoredDate"])] += 1
+                tally(n["authoredDate"])
             if not hist["pageInfo"]["hasNextPage"]:
                 break
             after = hist["pageInfo"]["endCursor"]
 
 
-def event_hours(token, hours):
+def event_hours(token, tally):
     """Add your pull requests, issues, reviews and new repos to hours."""
     for kind in EVENT_KINDS:
         after = None
@@ -156,7 +156,7 @@ def event_hours(token, hours):
                 break
             page = data["user"]["contributionsCollection"][kind]
             for n in page["nodes"]:
-                hours[local_hour(n["occurredAt"])] += 1
+                tally(n["occurredAt"])
             if not page["pageInfo"]["hasNextPage"]:
                 break
             after = page["pageInfo"]["endCursor"]
@@ -172,10 +172,19 @@ def contribution_hours(token, user):
         if key not in seen:
             seen.add(key)
             repos.append(r)
-    hours = [0] * 24
-    commit_hours(token, user["id"], repos, hours)
-    event_hours(token, hours)
-    return hours
+    hours, month_hours = [0] * 24, [0] * 24
+    month_start = datetime.datetime.now(datetime.timezone.utc).replace(
+        day=1, hour=0, minute=0, second=0, microsecond=0)  # UTC, like the calendar
+
+    def tally(stamp):  # every contribution counts for the year; this month's also go to month_hours
+        h = local_hour(stamp)
+        hours[h] += 1
+        if datetime.datetime.fromisoformat(stamp.replace("Z", "+00:00")) >= month_start:
+            month_hours[h] += 1
+
+    commit_hours(token, user["id"], repos, tally)
+    event_hours(token, tally)
+    return hours, month_hours
 
 
 def month_bounds():
@@ -214,7 +223,7 @@ def fetch(token):
         {"date": d["date"], "count": d["contributionCount"], "level": LEVELS.get(d["contributionLevel"], 0)}
         for w in weeks for d in w["contributionDays"]
     ]
-    return days, contribution_hours(token, user)
+    return (days, *contribution_hours(token, user))
 
 
 # Roughly your real shape (from the old productive-time card), for offline previews.
@@ -275,8 +284,9 @@ def main():
     token = personal or os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
     if "--sample" in sys.argv:
         days, hours, month = sample_days(), SAMPLE_HOURS, sample_month()
+        month_hours = [round(x / 9) for x in SAMPLE_HOURS]
     elif token:
-        days, hours = fetch(token)
+        days, hours, month_hours = fetch(token)
         month = month_counts(token)
     else:
         sys.exit("GITHUB_TOKEN not set (use --sample for demo data)")
@@ -286,7 +296,7 @@ def main():
            "updated": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
            "sample": "--sample" in sys.argv,
            "includes_private": bool(personal) and "--sample" not in sys.argv,
-           "tz_offset": TZ_OFFSET, "hours": hours, "month": month,
+           "tz_offset": TZ_OFFSET, "hours": hours, "month_hours": month_hours, "month": month,
            "stats": stats(days), "days": days}
     os.makedirs(os.path.dirname(OUT_PATH), exist_ok=True)
     with open(OUT_PATH, "w") as f:
