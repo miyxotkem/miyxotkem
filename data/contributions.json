@@ -1,6 +1,6 @@
 {
  "user": "miyxotkem",
- "updated": "2026-11-20 05:58 UTC",
+ "updated": "2026-11-20 06:05 UTC",
  "sample": false,
  "includes_private": true,
  "tz_offset": 7,
@@ -77,6 +77,103 @@
     "private": 0
    }
   }
+ },
+ "words": [
+  [
+   "release",
+   7
+  ],
+  [
+   "add",
+   5
+  ],
+  [
+   "claude",
+   5
+  ],
+  [
+   "clawd",
+   5
+  ],
+  [
+   "after",
+   3
+  ],
+  [
+   "bars",
+   2
+  ],
+  [
+   "clear",
+   2
+  ],
+  [
+   "costumes",
+   2
+  ],
+  [
+   "effort",
+   2
+  ],
+  [
+   "headphones",
+   2
+  ],
+  [
+   "hero",
+   2
+  ],
+  [
+   "let",
+   2
+  ],
+  [
+   "minute",
+   2
+  ],
+  [
+   "miyxotkem",
+   2
+  ],
+  [
+   "put",
+   2
+  ],
+  [
+   "run",
+   2
+  ]
+ ],
+ "words_include_private": false,
+ "languages": [
+  [
+   "TypeScript",
+   158
+  ],
+  [
+   "JavaScript",
+   123
+  ],
+  [
+   "C#",
+   112
+  ],
+  [
+   "HTML",
+   50
+  ],
+  [
+   "Python",
+   49
+  ],
+  [
+   "Java",
+   29
+  ]
+ ],
+ "latest": {
+  "at": "2026-11-20T05:26:56Z",
+  "repo": null
  },
  "stats": {
   "total": 680,
