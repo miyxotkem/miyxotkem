@@ -19,6 +19,7 @@ import datetime
 import json
 import os
 import random
+import re
 import sys
 import urllib.request
 
@@ -37,12 +38,13 @@ query($login: String!) {
         weeks { contributionDays { date contributionCount contributionLevel } }
       }
       commitContributionsByRepository(maxRepositories: 100) {
-        repository { name owner { login } }
+        repository { name owner { login } isPrivate primaryLanguage { name } }
+        contributions { totalCount }
       }
     }
     repositories(first: 50, ownerAffiliations: OWNER, isFork: false,
                  orderBy: {field: PUSHED_AT, direction: DESC}) {
-      nodes { name owner { login } }
+      nodes { name owner { login } isPrivate primaryLanguage { name } }
     }
   }
 }
@@ -54,7 +56,7 @@ query($owner: String!, $name: String!, $uid: ID!, $since: GitTimestamp!, $after:
     defaultBranchRef { target { ... on Commit {
       history(first: 100, after: $after, since: $since, author: {id: $uid}) {
         pageInfo { hasNextPage endCursor }
-        nodes { authoredDate }
+        nodes { authoredDate messageHeadline }
       }
     } } }
   }
@@ -121,7 +123,7 @@ def local_hour(stamp):
     return t.astimezone(datetime.timezone(datetime.timedelta(hours=TZ_OFFSET))).hour
 
 
-def commit_hours(token, uid, repos, tally):
+def commit_hours(token, uid, repos, tally, on_commit=None):
     """Add your commits from the last year to hours, by local hour of day (0-23)."""
     since = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=365)).strftime("%Y-%m-%dT%H:%M:%SZ")
     for r in repos:
@@ -139,6 +141,8 @@ def commit_hours(token, uid, repos, tally):
             hist = ref["target"]["history"]
             for n in hist["nodes"]:
                 tally(n["authoredDate"])
+                if on_commit:
+                    on_commit(r, n)
             if not hist["pageInfo"]["hasNextPage"]:
                 break
             after = hist["pageInfo"]["endCursor"]
@@ -188,14 +192,63 @@ def contribution_hours(token, user):
     def tally_month(stamp):
         month_hours[local_hour(stamp)] += 1
 
-    commit_hours(token, user["id"], repos, tally)
+    commits = []  # (repo, commit) pairs, for the words and status cards
+    commit_hours(token, user["id"], repos, tally, lambda r, n: commits.append((r, n)))
     # The default (last-year) event lists can miss the newest few items, so
     # this month's events come from a query bounded to this month.
     event_hours(token, tally_year)
     fmt = "%Y-%m-%dT%H:%M:%SZ"
     event_hours(token, tally_month, {"from": month_start.strftime(fmt),
                                      "to": datetime.datetime.now(datetime.timezone.utc).strftime(fmt)})
-    return hours, month_hours
+    return hours, month_hours, extras(user, commits, month_start)
+
+
+# ---- words, languages and latest commit (for the words, wrapped and status cards)
+# Commit messages from private repos stay out of the words card unless this is
+# set, because the card is public. Set WORDS_INCLUDE_PRIVATE=1 to count them.
+WORDS_INCLUDE_PRIVATE = os.environ.get("WORDS_INCLUDE_PRIVATE") == "1"
+STOPWORDS = set("""a an the and or but to of for in on at by with from into onto via as is are was be been
+it its this that these those some more less when then than not no yes so up down out off over under
+use using used new old all any each per vs my our your their i we you he she they them me us
+merge merged pull request requests branch main master skip ci wip co authored signed off
+""".split())
+
+
+def words_of(headline):
+    out = []
+    for w in re.findall(r"[a-zA-Z][a-zA-Z+#.\-]*", headline.lower()):
+        w = w.strip(".-")
+        if len(w) >= 2 and w not in STOPWORDS:
+            out.append(w)
+    return out
+
+
+def extras(user, commits, month_start):
+    when = lambda st: datetime.datetime.fromisoformat(st.replace("Z", "+00:00"))
+    # words: this month's commit headlines
+    counts = {}
+    for r, n in commits:
+        if when(n["authoredDate"]) < month_start or (r.get("isPrivate") and not WORDS_INCLUDE_PRIVATE):
+            continue
+        for w in words_of(n.get("messageHeadline") or ""):
+            counts[w] = counts.get(w, 0) + 1
+    words = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))[:16]
+
+    # languages: each repo's main language, weighted by your commits to it this year
+    langs = {}
+    for x in user["contributionsCollection"]["commitContributionsByRepository"]:
+        lang = (x["repository"].get("primaryLanguage") or {}).get("name")
+        if lang:
+            langs[lang] = langs.get(lang, 0) + x["contributions"]["totalCount"]
+    languages = sorted(langs.items(), key=lambda kv: -kv[1])[:6]
+
+    # the latest commit; a private repo's name is never written out
+    latest = None
+    if commits:
+        r, n = max(commits, key=lambda rn: when(rn[1]["authoredDate"]))
+        latest = {"at": n["authoredDate"], "repo": None if r.get("isPrivate") else r["name"]}
+    return {"words": words, "words_include_private": WORDS_INCLUDE_PRIVATE,
+            "languages": languages, "latest": latest}
 
 
 def month_bounds():
@@ -234,7 +287,7 @@ def fetch(token):
         {"date": d["date"], "count": d["contributionCount"], "level": LEVELS.get(d["contributionLevel"], 0)}
         for w in weeks for d in w["contributionDays"]
     ]
-    return (days, *contribution_hours(token, user))
+    return (days, *contribution_hours(token, user))  # days, hours, month_hours, extras
 
 
 # Roughly your real shape (from the old productive-time card), for offline previews.
@@ -296,8 +349,12 @@ def main():
     if "--sample" in sys.argv:
         days, hours, month = sample_days(), SAMPLE_HOURS, sample_month()
         month_hours = [round(x / 9) for x in SAMPLE_HOURS]
+        more = {"words": [["fix", 42], ["add", 37], ["update", 29], ["detection", 21], ["model", 18], ["refactor", 14]],
+                "words_include_private": False, "languages": [["Python", 120], ["C#", 70], ["TypeScript", 30]],
+                "latest": {"at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                           "repo": "sample-repo"}}
     elif token:
-        days, hours, month_hours = fetch(token)
+        days, hours, month_hours, more = fetch(token)
         month = month_counts(token)
     else:
         sys.exit("GITHUB_TOKEN not set (use --sample for demo data)")
@@ -308,7 +365,7 @@ def main():
            "sample": "--sample" in sys.argv,
            "includes_private": bool(personal) and "--sample" not in sys.argv,
            "tz_offset": TZ_OFFSET, "hours": hours, "month_hours": month_hours, "month": month,
-           "stats": stats(days), "days": days}
+           **more, "stats": stats(days), "days": days}
     os.makedirs(os.path.dirname(OUT_PATH), exist_ok=True)
     with open(OUT_PATH, "w") as f:
         json.dump(out, f, indent=1)
