@@ -403,14 +403,7 @@ def tile(i, label, key, big, word, blurb):
     return svg(TILE_W, h, "".join(b), ["serif", "serif-i", "sans", "mono"], f"{label}: {big} {word}. {blurb}")
 
 
-# ---- section title + contributions-by-hour card ------------------------------------
-def title(text, italic, dark):
-    fill = "#f0f0ee" if dark else INK
-    body = (f'<text class="u" x="2" y="46" font-family="{SERIF}" font-size="36" fill="{fill}">{escape(text)} '
-            f'<tspan font-style="italic">{escape(italic)}</tspan></text>')
-    return svg(W, 64, body, ["serif", "serif-i"], f"{text} {italic}")
-
-
+# ---- contributions-by-hour card ---------------------------------------------
 def hour_label(h):
     return f"{h % 12 or 12} {'am' if h < 12 else 'pm'}"
 
@@ -508,10 +501,8 @@ def readme_block(data):
         img("heatmap.svg", f"Contribution graph, in {ACCENT_WORD}, refreshed daily") + "<br>",
         img("activity.svg", "Contributions in the last 12 months, by month, with streak and busiest day") + "<br>",
         img("month.svg", "This month: contributions by day, plus commits, pull requests, reviews, issues and new repos") + "<br>",
-        "".join(img(f"{t[0]}.svg", f"{t[1]}: {t[3]} {t[4]}", third) for t in TILES) + "<br>",
-        '<picture><source media="(prefers-color-scheme: dark)" srcset="./cards/title-code-dark.svg" />'
-        + img("title-code-light.svg", "When I code") + "</picture><br>",
-        img("hours.svg", "Public contributions by hour of day (private repos not counted)"),
+        img("hours.svg", "Public contributions by hour of day (private repos not counted)") + "<br>",
+        "".join(img(f"{t[0]}.svg", f"{t[1]}: {t[3]} {t[4]}", third) for t in TILES),
         "</div>",
         "",
         '<p align="center">',
@@ -542,8 +533,6 @@ def main():
     write("month.svg", month_card(data))
     for i, t in enumerate(TILES):
         write(f"{t[0]}.svg", tile(i, *t[1:]))
-    write("title-code-light.svg", title("When I", "code", False))
-    write("title-code-dark.svg", title("When I", "code", True))
     write("hours.svg", hours_card(data))
     for i, (t, _) in enumerate(FOOTER_LINKS):
         write(f"link-{t}.svg", link_svg(t, i == len(FOOTER_LINKS) - 1))
