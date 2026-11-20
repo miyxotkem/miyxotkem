@@ -252,8 +252,7 @@ def activity(data):
     today = datetime.date.today()
     this_month = today.strftime("%Y-%m")
     nxt = (today.replace(day=1) + datetime.timedelta(days=32)).strftime("%Y-%m")
-    full = [m["count"] for m in months if m["month"] != this_month] or [1]
-    peak = max(full + [1])
+    peak = max([m["count"] for m in months] + [1])  # the month so far counts too, once it leads
     bx, bw, base, top = 44, 520, h - GAP - 44, 160
     slot = bw / 12
     nx = bx + len(months)*slot + slot*0.1
@@ -262,9 +261,9 @@ def activity(data):
              f'{datetime.date.fromisoformat(nxt + "-01").strftime("%b")}</text>')
     for i, m in enumerate(months):
         partial = m["month"] == this_month
-        bh = max(4, min(1, m["count"] / peak) * (base - top))
+        bh = max(4, m["count"] / peak * (base - top))
         x = bx + i*slot + slot*0.1
-        fill = GREY_BAR if partial else ACCENT if m["count"] == peak else INK
+        fill = ACCENT if m["count"] == peak else GREY_BAR if partial else INK
         b.append(f'<rect class="b"{at(.4 + i*.06)} x="{x:.1f}" y="{base-bh:.1f}" width="{slot*0.8:.1f}" '
                  f'height="{bh:.1f}" rx="4" fill="{fill}"><title>{m["count"]} in {m["month"]}</title></rect>')
         mon = datetime.date.fromisoformat(m["month"] + "-01").strftime("%b")
