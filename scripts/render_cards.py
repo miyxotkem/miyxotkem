@@ -529,7 +529,7 @@ def waffle_card(data):
 
 # ---- the rise: month by month, with the running total -------------------------
 # Monthly bars (the quiet months grey, the months since the turn in orange, a
-# dashed outline for where this month lands at its pace) under the running
+# dashed line for the usual month) under the running
 # total as a share of the year, which turns orange where most of the year began.
 def rise_card(data):
     # The bars run January to December of this year, with the months to come left
@@ -542,9 +542,7 @@ def rise_card(data):
             counts[int(d["date"][5:7]) - 1] += d["count"]
     year = sum(counts) or 1
     recent = [m["count"] for m in data["stats"]["monthly"][:-1]]
-    ndays = calendar.monthrange(ref.year, ref.month)[1]
     cur, prev = counts[-1], recent[-1]
-    pace = round(cur / ref.day * ndays)
     usual = statistics.median(recent) or 1
     record = cur > max(recent)
     mname = ref.strftime("%B")
@@ -563,19 +561,14 @@ def rise_card(data):
 
     bx, bw, base, top = 44, 552, h - GAP - 48, 176
     slot = bw / 12
-    peak = max(pace, cur, *counts)
-    Y = lambda v: base - v / peak * (base - top) * .6  # bars keep to the lower part; the line rises above them
+    peak = max(counts)
+    Y = lambda v: base - v / peak * (base - top) * .42  # bars keep to the lower part; the line rises above them
     b.append(f'<rect x="{bx}" y="{base}" width="{bw}" height="1" fill="{RULE}"/>')
     for i, c in enumerate(counts):
         x, w = bx + i*slot + slot*.14, slot*.72
         last = i == len(counts) - 1
         fill = ACCENT if last else SHADES[2] if i >= turn else GREY_BAR
         bh = max(3, base - Y(c))
-        if last and pace > cur:  # where the month lands at this pace
-            b.append(f'<rect class="i"{at(1.2)} x="{x:.1f}" y="{Y(pace):.1f}" width="{w:.1f}" height="{base-Y(pace):.1f}" '
-                     f'rx="4" fill="none" stroke="{ACCENT}" stroke-width="1.5" stroke-dasharray="4 3"/>'
-                     f'<text class="i"{at(1.4)} x="{x - 8:.1f}" y="{Y(pace)+4:.1f}" text-anchor="end" font-family="{MONO}" '
-                     f'font-size="11" fill="{MUTED}">~{pace} at this pace</text>')
         b.append(f'<rect class="b"{at(.3 + i*.05)} x="{x:.1f}" y="{base-bh:.1f}" width="{w:.1f}" height="{bh:.1f}" '
                  f'rx="4" fill="{fill}"><title>{c} in {datetime.date(ref.year, i + 1, 1):%B}</title></rect>')
         if i >= len(counts) - 2:
@@ -693,7 +686,7 @@ def week_card(data):
     tz = data.get("tz_offset", 7)
     tzs = f"UTC{'+' if tz >= 0 else '-'}{abs(tz)}"
     total = sum(map(sum, grid))
-    h = 372
+    h = 400
     b = [card(W, h)]
     b.append(f'<text class="u" x="44" y="62" font-family="{MONO}" font-size="12" letter-spacing="1.8" '
              f'fill="{INK_SOFT}">WHEN I WORK · {span_tag} · {tzs}</text>')
@@ -717,7 +710,9 @@ def week_card(data):
     # the grid, shaded like the heatmap, with a rule between weekdays and the weekend
     nz = sorted(c for r in grid for c in r if c)
     cuts = [nz[int(len(nz) * q)] for q in (.2, .45, .7, .9)] if nz else [1, 2, 3, 4]
-    gx, gy, step = 88, 154, 21.6
+    b.append(f'<text class="u"{at(.2)} x="44" y="156" font-family="{SANS}" font-size="14.5" fill="{INK_SOFT}">'
+             f'Each square is an hour of the week, shaded by contributions {span}.</text>')
+    gx, gy, step = 88, 184, 21.6
     cell = step * .8
     for d in range(7):
         b.append(f'<text class="i"{at(.2)} x="{gx-12}" y="{gy + d*step + cell*.75:.1f}" text-anchor="end" '
@@ -744,7 +739,7 @@ def week_card(data):
             (f'{weekend}<tspan fill="{MUTED}">%</tspan>', "on weekends")]
     rx = 640
     for i, (big, sub) in enumerate(rows):
-        y = 104 + i*97
+        y = 120 + i*104
         b.append(f'<g class="u"{at(.5 + i*.15)}><text x="{rx}" y="{y}" font-family="{SERIF}" font-size="44" '
                  f'letter-spacing="-.5" fill="{INK}">{big}</text><text x="{rx+1}" y="{y+25}" font-family="{SANS}" '
                  f'font-size="14.5" fill="{INK_SOFT}">{escape(sub)}</text></g>')
