@@ -27,6 +27,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PROFILE_TOKEN: ${{ secrets.PROFILE_TOKEN }}   # optional: your token, so private repos count too
+          WORDS_INCLUDE_PRIVATE: "1"   # words card: also count commit messages from private repos (own and org)
         run: python scripts/fetch_contributions.py
 
       - name: Render cards
