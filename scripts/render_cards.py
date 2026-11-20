@@ -626,7 +626,7 @@ def hours_card(data, monthly=False):
         b.append(f'<path class="i"{at(1.3)} d="M{px:.1f},{py+7:.1f} L{px:.1f},{base}" stroke="{ACCENT}" '
                  f'stroke-width="1.5" stroke-dasharray="3 3" fill="none"/>')
         b.append(f'<text class="i"{at(1.4)} x="{px:.1f}" y="{base+22}" text-anchor="middle" font-family="{MONO}" '
-                 f'font-size="11.5" fill="{ACCENT}">{hour_label(peak_h)}</text>')
+                 f'font-size="11.5" fill="{ACCENT}">{peak_h % 12 or 12}</text>')
         b.append(f'<circle class="d"{at(1.4)} cx="{px:.1f}" cy="{py:.1f}" r="6" fill="{ACCENT}" '
                  f'stroke="{PAPER}" stroke-width="2"/>')
         b.append(f'<text class="i"{at(1.5)} x="{px:.1f}" y="{py-14:.1f}" text-anchor="middle" '
