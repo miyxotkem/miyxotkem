@@ -373,12 +373,14 @@ def month_card(data):
 
 
 # ---- this month, one square per contribution --------------------------------------
-WAFFLE_TYPES = {"commit": ("commit", "commits", INK, "commits"),
+# Commits are most of the squares, so they get a quiet sand and the rarer kinds
+# carry the brand colours. Checked for colour-blind separation (all pairs).
+WAFFLE_TYPES = {"commit": ("commit", "commits", "#ddd5c7", "commits"),
                 "pr": ("pull request", "pull requests", ACCENT, "pull_requests"),
                 "review": ("review", "reviews", COLORS["learn"], "reviews"),
-                "issue": ("issue", "issues", "#a24f33", "issues"),
-                "repo": ("new repo", "new repos", GREY_BAR, "repos"),
-                "other": ("other", "other", "#e6e1d6", None)}
+                "issue": ("issue", "issues", INK, "issues"),
+                "repo": ("new repo", "new repos", "#9c4428", "repos"),
+                "other": ("other", "other", "none", None)}  # drawn as an outline: time unknown
 
 
 def waffle_card(data):
@@ -418,8 +420,9 @@ def waffle_card(data):
                              f'fill="{MUTED}"/><text class="i"{at(.8)} x="{x+3:.1f}" y="{y0 + rows*pitch + 20:.1f}" '
                              f'font-family="{MONO}" font-size="10.5" fill="{MUTED}">{lt.day}</text>')
                 last_day = lt.day
+        outline = f' stroke="{GREY_BAR}" stroke-dasharray="2 2"' if k == "other" else ""
         b.append(f'<rect class="d"{at(.1 + c*.025)} x="{x:.1f}" y="{y:.1f}" width="{sz:.1f}" height="{sz:.1f}" '
-                 f'rx="3" fill="{WAFFLE_TYPES[k][2]}"><title>{escape(tip)}</title></rect>')
+                 f'rx="3" fill="{WAFFLE_TYPES[k][2]}"{outline}><title>{escape(tip)}</title></rect>')
     if not ev:
         b.append(f'<text x="44" y="150" font-family="{SERIF}" font-style="italic" font-size="36" fill="{MUTED}">'
                  f'Nothing yet this month</text>')
@@ -434,7 +437,8 @@ def waffle_card(data):
         one, many, col, field = WAFFLE_TYPES[k]
         n = counts[k]
         cx = 44 + i*colw
-        b.append(f'<g class="u"{at(.8 + i*.08)}><rect x="{cx:.1f}" y="{yl-10}" width="10" height="10" rx="2" fill="{col}"/>'
+        swatch = f' stroke="{GREY_BAR}" stroke-dasharray="2 2"' if k == "other" else ""
+        b.append(f'<g class="u"{at(.8 + i*.08)}><rect x="{cx:.1f}" y="{yl-10}" width="10" height="10" rx="2" fill="{col}"{swatch}/>'
                  f'<text x="{cx+18:.1f}" y="{yl}" font-family="{SANS}" font-size="14.5" fill="{INK_SOFT}">'
                  f'{escape(one if n == 1 else many)}</text>'
                  f'<text x="{cx:.1f}" y="{yl+34}" font-family="{SERIF}" font-size="32" fill="{INK}">{n:,}</text>')
