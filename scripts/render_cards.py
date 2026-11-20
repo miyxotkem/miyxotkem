@@ -374,10 +374,10 @@ def month_card(data):
 
 # ---- this month, one square per contribution --------------------------------------
 # Commits carry the accent orange; the other kinds use the rest of the brand
-# colours. Checked for colour-blind separation (all pairs).
+# colours, and new repos are yellow stars so they read by shape too.
 WAFFLE_TYPES = {"commit": ("commit", "commits", ACCENT, "commits"),
                 "pr": ("pull request", "pull requests", INK, "pull_requests"),
-                "review": ("review", "reviews", "#6b8aa6", "reviews"),
+                "review": ("review", "reviews", "#ddd5c7", "reviews"),
                 "issue": ("issue", "issues", "#9c4428", "issues"),
                 "repo": ("new repo", "new repos", COLORS["learn"], "repos"),  # drawn as a star
                 "other": ("other", "other", "none", None)}  # drawn as an outline: time unknown
