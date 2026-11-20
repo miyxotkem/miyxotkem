@@ -5,7 +5,7 @@
 <picture><source media="(prefers-color-scheme: dark)" srcset="./cards/heatmap-dark.svg?v=f374c0b5" /><img src="./cards/heatmap.svg?v=f06e74e2" width="100%" alt="Contribution graph for the year, January to December, in orange, with the year&#x27;s totals" /></picture><br>
 <picture><source media="(prefers-color-scheme: dark)" srcset="./cards/rise-dark.svg?v=53cc78be" /><img src="./cards/rise.svg?v=3393ebcb" width="100%" alt="Contributions month by month, with the running total for the year" /></picture><br>
 <picture><source media="(prefers-color-scheme: dark)" srcset="./cards/month-dark.svg?v=14432896" /><img src="./cards/month.svg?v=5a7baa8d" width="100%" alt="This month: contributions by day" /></picture><br>
-<picture><source media="(prefers-color-scheme: dark)" srcset="./cards/week-dark.svg?v=c45bfda7" /><img src="./cards/week.svg?v=9ed59af0" width="100%" alt="When I work: contributions by weekday and hour of day" /></picture><br>
+<picture><source media="(prefers-color-scheme: dark)" srcset="./cards/week-dark.svg?v=852ead77" /><img src="./cards/week.svg?v=f480644d" width="100%" alt="When I work: contributions by weekday and hour of day" /></picture><br>
 <picture><source media="(prefers-color-scheme: dark)" srcset="./cards/waffle-dark.svg?v=42d417df" /><img src="./cards/waffle.svg?v=6d3febbc" width="100%" alt="This month, one square per contribution, coloured by type, in order" /></picture><br>
 <picture><source media="(prefers-color-scheme: dark)" srcset="./cards/words-dark.svg?v=7f0f142e" /><img src="./cards/words.svg?v=ec1cc1e0" width="100%" alt="Most used words in this month&#x27;s commit messages" /></picture>
 </div>

@@ -728,18 +728,19 @@ def week_card(data):
                      f'width="{cell:.1f}" height="{cell:.1f}" rx="3" fill="{SHADES[level_of(c, cuts)]}">'
                      f'<title>{c} on {WEEKDAYS[d]}s at {hour_label(x)}</title></rect>')
     b.append(f'<rect class="i"{at(.9)} x="{gx-4}" y="{gy + 5*step - step*.1:.1f}" width="{24*step:.1f}" '
-             f'height="1" fill="{RULE}"/>')
+             f'height="1" fill="{INK}" opacity=".85"/>')
     for x in (0, 6, 12, 18, 23):
         b.append(f'<text class="i"{at(.8)} x="{gx + x*step + cell/2:.1f}" y="{gy + 7*step + 16:.1f}" '
                  f'text-anchor="middle" font-family="{MONO}" font-size="11" fill="{MUTED}">{x:02d}</text>')
 
     # three numbers on the right, laid out like the other stat columns
-    bd, bh = max(((d, x) for d in range(7) for x in range(24)), key=lambda p: grid[p[0]][p[1]])
+    by_hour = [sum(r[x] for r in grid) for x in range(24)]
+    bh = max(range(24), key=lambda x: by_hour[x])
     best_day = max(range(7), key=lambda d: sum(grid[d]))
     weekend = round(100 * we / total) if total else 0
     num, ampm = hour_label(bh).split()
-    rows = [(f'{WEEKDAYS[bd][:3]} {num} <tspan font-style="italic">{ampm}</tspan>',
-             f"busiest hour, {grid[bd][bh]} contributions"),
+    rows = [(f'{num} <tspan font-style="italic">{ampm}</tspan>',
+             f"my busiest hour, {by_hour[bh]} contributions"),
             (WEEKDAYS[best_day], "my busiest day of the week"),
             (f'{weekend}<tspan fill="{MUTED}">%</tspan>', "on weekends")]
     rx = 640
@@ -751,7 +752,7 @@ def week_card(data):
         if i < 2:
             b.append(f'<rect class="i"{at(.7 + i*.15)} x="{rx}" y="{y+48}" width="196" height="1" fill="{RULE}"/>')
     label = (f"When I work, by weekday and hour ({tzs}), {span}: {lead} {phrase}. "
-             f"Busiest hour {WEEKDAYS[bd]} {hour_label(bh)}, busiest day {WEEKDAYS[best_day]}, "
+             f"Busiest hour {hour_label(bh)}, busiest day {WEEKDAYS[best_day]}, "
              f"{weekend}% on weekends, {total} contributions with a known time.")
     return svg(W, h, "".join(b), ["serif", "serif-i", "sans", "mono"], label)
 
