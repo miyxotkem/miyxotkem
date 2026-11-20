@@ -1,11 +1,11 @@
 name: Refresh profile cards
 
 # Re-draws the animated SVG cards in cards/ from real contribution data.
-# Runs daily, on every push to main, and on demand from the Actions tab.
+# Runs every hour, on every push to main, and on demand from the Actions tab.
 
 "on":
   schedule:
-    - cron: "0 0 * * *"    # 07:00 in Vietnam (UTC+7)
+    - cron: "17 * * * *"   # hourly, at :17 (runs on the hour are the most delayed)
   workflow_dispatch: {}
   push:
     branches: [main]
