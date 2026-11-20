@@ -242,14 +242,12 @@ def scan_commits(token, uid, repos, since):
             if not repo:
                 break
             default = (repo.get("defaultBranchRef") or {}).get("name")
-            stale = False
             for ref in repo["refs"]["nodes"]:
                 t = ref.get("target") or {}
                 if "history" not in t:
                     continue
                 if (t.get("committedDate") or "") < since:
-                    stale = True  # branches come newest first, so the rest are older still
-                    break
+                    continue  # nothing on this branch since a year ago
                 counted = not repo["isFork"] and ref["name"] in (default, "gh-pages")
                 hist = t["history"]
                 add(r, hist["nodes"], counted)
@@ -267,7 +265,7 @@ def scan_commits(token, uid, repos, since):
                         break
                     add(r, h["nodes"], counted)
                     cursor = h["pageInfo"]["endCursor"] if h["pageInfo"]["hasNextPage"] else None
-            if stale or not repo["refs"]["pageInfo"]["hasNextPage"]:
+            if not repo["refs"]["pageInfo"]["hasNextPage"]:
                 break
             after = repo["refs"]["pageInfo"]["endCursor"]
     return commits
