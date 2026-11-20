@@ -4,7 +4,7 @@
 <img src="./cards/heatmap.svg" width="100%" alt="Contribution graph, in orange, refreshed daily" /><br>
 <img src="./cards/activity.svg" width="100%" alt="Contributions in the last 12 months, by month, with streak and busiest day" /><br>
 <img src="./cards/month.svg" width="100%" alt="This month: contributions by day, plus commits, pull requests, reviews, issues and new repos" /><br>
-<img src="./cards/hours.svg" width="100%" alt="Public contributions by hour of day (private repos not counted)" /><br>
+<img src="./cards/hours.svg" width="100%" alt="Contributions by hour of day" /><br>
 <img src="./cards/paper.svg" width="33.333%" alt="PAPER: ISWTA 2026" /><img src="./cards/research.svg" width="33.333%" alt="RESEARCH: UAV detection" /><img src="./cards/build.svg" width="33.333%" alt="BUILD: 2 systems" />
 </div>
 
