@@ -82,6 +82,7 @@ CSS = """
 @keyframes beat{0%,100%{opacity:1}50%{opacity:.3}}
 @keyframes drop{0%{opacity:0;transform:translateY(70px) rotate(-6deg) scale(.8)}60%{opacity:1;transform:translateY(-6px) rotate(1.5deg)}100%{opacity:1;transform:none}}
 @keyframes type{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+@keyframes draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
 @keyframes shine{0%{transform:translateX(-200px) skewX(-18deg)}25%,100%{transform:translateX(360px) skewX(-18deg)}}
 .u{opacity:0;animation:up .8s cubic-bezier(.2,.7,.2,1) both;transform-box:fill-box}
 .i{opacity:0;animation:in 1s ease-out both}
@@ -90,8 +91,9 @@ CSS = """
 .beat{animation:beat 1.6s ease-in-out infinite}
 .drop{opacity:0;transform-box:fill-box;transform-origin:50% 70%;animation:drop 1s cubic-bezier(.2,.8,.2,1) both}
 .t{animation:type 1.6s steps(60) both}
+.draw{stroke-dasharray:1;stroke-dashoffset:1;animation:draw 1.4s cubic-bezier(.4,0,.2,1) both}
 .shine{transform:translateX(-200px);animation:shine 5s ease-in-out infinite both}
-@media (prefers-reduced-motion: reduce){.u,.i,.b,.d,.drop,.t{animation:none!important;opacity:1!important;transform:none!important;clip-path:none!important}.beat{animation:none}.shine{display:none}}
+@media (prefers-reduced-motion: reduce){.u,.i,.b,.d,.drop,.t,.draw{animation:none!important;opacity:1!important;transform:none!important;clip-path:none!important;stroke-dashoffset:0!important}.beat{animation:none}.shine{display:none}}
 """
 
 _font_cache = {}
@@ -417,6 +419,20 @@ def tile(i, label, key, big, word, blurb):
 
 
 # ---- contributions-by-hour card ---------------------------------------------
+def smooth_path(pts, floor=None):
+    """Catmull-Rom curve through pts as SVG cubic beziers; control points are
+    kept above floor so the curve never dips below the baseline."""
+    p = f"M{pts[0][0]:.1f},{pts[0][1]:.1f}"
+    for i in range(len(pts) - 1):
+        p0, p1, p2, p3 = pts[max(i-1, 0)], pts[i], pts[i+1], pts[min(i+2, len(pts)-1)]
+        c1 = [p1[0] + (p2[0]-p0[0])/6, p1[1] + (p2[1]-p0[1])/6]
+        c2 = [p2[0] - (p3[0]-p1[0])/6, p2[1] - (p3[1]-p1[1])/6]
+        if floor is not None:
+            c1[1], c2[1] = min(c1[1], floor), min(c2[1], floor)
+        p += f" C{c1[0]:.1f},{c1[1]:.1f} {c2[0]:.1f},{c2[1]:.1f} {p2[0]:.1f},{p2[1]:.1f}"
+    return p
+
+
 def hour_label(h):
     return f"{h % 12 or 12} {'am' if h < 12 else 'pm'}"
 
@@ -456,24 +472,34 @@ def hours_card(data, monthly=False):
     peak_h = max(range(24), key=lambda x: hours[x])
     peak = max(hours + [1])
     bx, bw, base, ceil = 44, 548, h - GAP - 44, 160
-    slot = bw / 24
+    step = bw / 23
     # soft band behind the night hours (10 pm to 5 am)
-    for x0, x1 in ((0, 5), (22, 24)):
-        b.append(f'<rect class="i" x="{bx + x0*slot:.1f}" y="{ceil-6}" width="{(x1-x0)*slot:.1f}" '
+    for x0, x1 in ((0, 5), (22, 23)):
+        b.append(f'<rect class="i" x="{bx + x0*step:.1f}" y="{ceil-6}" width="{(x1-x0)*step:.1f}" '
                  f'height="{base-ceil+6}" fill="{EMPTY}" opacity=".55"/>')
-    b.append(f'<text class="i"{at(.3)} x="{bx + 2.5*slot:.1f}" y="{ceil+8}" text-anchor="middle" '
+    b.append(f'<text class="i"{at(.3)} x="{bx + 2.5*step:.1f}" y="{ceil+8}" text-anchor="middle" '
              f'font-family="{MONO}" font-size="10" letter-spacing="1.5" fill="{MUTED}">NIGHT</text>')
-    for i, c in enumerate(hours):
-        bh = max(3, c / peak * (base - ceil - 22))
-        x = bx + i*slot + slot*0.12
-        fill = ACCENT if i == peak_h and c else INK if c else GREY_BAR
-        b.append(f'<rect class="b"{at(.35 + i*.035)} x="{x:.1f}" y="{base-bh:.1f}" width="{slot*0.76:.1f}" '
-                 f'height="{bh:.1f}" rx="3" fill="{fill}"><title>{c} contributions at {hour_label(i)}</title></rect>')
-        if i == peak_h and c:
-            b.append(f'<text class="i"{at(1.4)} x="{x + slot*0.38:.1f}" y="{base-bh-9:.1f}" text-anchor="middle" '
-                     f'font-family="{MONO}" font-size="11.5" fill="{ACCENT}">{c}</text>')
+    # a smooth curve through the 24 hours, with a soft fill under it
+    pts = [(bx + i*step, base - c / peak * (base - ceil - 22)) for i, c in enumerate(hours)]
+    line = smooth_path(pts, floor=base)
+    b.append(f'<defs><linearGradient id="hg" x1="0" y1="0" x2="0" y2="1">'
+             f'<stop offset="0" stop-color="{ACCENT}" stop-opacity=".42"/>'
+             f'<stop offset="1" stop-color="{ACCENT}" stop-opacity="0"/></linearGradient></defs>')
+    b.append(f'<path class="i"{at(.9)} d="{line} L{pts[-1][0]:.1f},{base} L{pts[0][0]:.1f},{base}Z" fill="url(#hg)"/>')
+    b.append(f'<rect x="{bx}" y="{base}" width="{bw}" height="1" fill="{RULE}"/>')
+    b.append(f'<path class="draw"{at(.3)} d="{line}" pathLength="1" fill="none" stroke="{INK}" stroke-width="2" '
+             f'stroke-linejoin="round" stroke-linecap="round"/>')
+    for i, c in enumerate(hours):  # invisible hover targets, one per hour
+        b.append(f'<rect x="{bx + (i-.5)*step:.1f}" y="{ceil}" width="{step:.1f}" height="{base-ceil}" fill="transparent">'
+                 f'<title>{c} contributions at {hour_label(i)}</title></rect>')
+    if hours[peak_h]:
+        px, py = pts[peak_h]
+        b.append(f'<circle class="d"{at(1.4)} cx="{px:.1f}" cy="{py:.1f}" r="6" fill="{ACCENT}" '
+                 f'stroke="{PAPER}" stroke-width="2"/>')
+        b.append(f'<text class="i"{at(1.5)} x="{px:.1f}" y="{py-14:.1f}" text-anchor="middle" '
+                 f'font-family="{MONO}" font-size="11.5" fill="{ACCENT}">{hours[peak_h]}</text>')
     for i in (0, 6, 12, 18, 23):
-        b.append(f'<text class="i"{at(.8)} x="{bx + i*slot + slot*0.5:.1f}" y="{base+22}" text-anchor="middle" '
+        b.append(f'<text class="i"{at(.8)} x="{bx + i*step:.1f}" y="{base+22}" text-anchor="middle" '
                  f'font-family="{MONO}" font-size="11" fill="{MUTED}">{i:02d}</text>')
 
     rx = 640
