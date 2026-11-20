@@ -575,7 +575,7 @@ def words_card(data):
     shown = []
     for i, (w, n) in enumerate(words):
         fs = 18 + 38 * (n / mx)
-        wpx = len(w) * fs * 0.44 + 10 + len(str(n)) * 7
+        wpx = len(w) * fs * 0.40 + 10 + len(str(n)) * 7
         if x + wpx > W - 44:
             line += 1
             x, y = 44, y + 58
