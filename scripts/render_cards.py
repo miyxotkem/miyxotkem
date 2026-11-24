@@ -384,7 +384,7 @@ def month_card(data):
     if prev:
         prev = with_other(prev, monthly.get(m["prev"]["month"]))
 
-    h = 272
+    h = 372
     b = [card(W, h)]
     b.append(f'<text class="u" x="44" y="62" font-family="{MONO}" font-size="12" letter-spacing="1.8" '
              f'fill="{INK_SOFT}">CONTRIBUTIONS THIS MONTH</text>')
@@ -422,13 +422,16 @@ def month_card(data):
     for d in sorted({1, 10, 20, ndays}):
         b.append(f'<text class="i"{at(.8)} x="{bx + (d-1)*slot + slot*0.5:.1f}" y="{base+20}" text-anchor="middle" '
                  f'font-family="{MONO}" font-size="11" fill="{MUTED}">{d}</text>')
-    # the breakdown by type lives in the waffle card right below
+    # the breakdown by type, with last month's count beside each
+    by_type = type_counts(data, ym, total)
+    row, row_text = type_row(by_type, prev, pname, h - GAP - 64)
+    b.append(row)
 
-    label = f"{total} contributions in {mname} so far (day {ref.day} of {ndays})."
+    label = f"{total} contributions in {mname} so far (day {ref.day} of {ndays})" + (f": {row_text}." if row_text else ".")
     return svg(W, h, "".join(b), ["serif", "serif-i", "sans", "mono"], label)
 
 
-# ---- this month, one square per contribution --------------------------------------
+# ---- contribution types --------------------------------------------------------
 # Commits carry the accent orange; the other kinds use the rest of the brand
 # colours, and new repos are yellow stars so they read by shape too.
 def waffle_types():
@@ -451,60 +454,23 @@ def star(cx, cy, r, fill, extra=""):
     return f'<polygon points="{" ".join(pts)}" fill="{fill}" stroke-linejoin="round"{extra}/>'
 
 
-def waffle_card(data):
-    """This month as one square per contribution, coloured by type, in the order
-    they happened (top to bottom, then left to right)."""
-    days = data["days"]
-    ref = datetime.date.fromisoformat(days[-1]["date"])
-    ym = ref.strftime("%Y-%m")
-    total = sum(d["count"] for d in days if d["date"].startswith(ym))
-    ev = [e for e in data.get("month_events") or [] if e[0][:7] == ym or True]
-    ev = ev[:total] + [[None, "other"]] * max(0, total - len(ev))  # counted by GitHub, time unknown
-    tz = datetime.timezone(datetime.timedelta(hours=data.get("tz_offset", 7)))
-    m = data.get("month") or {}
-    prev = (m.get("prev") or {}).get("counts") if m.get("month") == ym else None
-    pname = datetime.date.fromisoformat(m["prev"]["month"] + "-01").strftime("%b") if prev else ""
-
-    h = 360
-    b = [card(W, h)]
-    b.append(f'<text class="u" x="44" y="62" font-family="{MONO}" font-size="12" letter-spacing="1.8" '
-             f'fill="{INK_SOFT}">ONE SQUARE PER CONTRIBUTION, IN ORDER</text>')
-    rows, x0, y0 = 7, 44, 88
-    cols = max(1, (len(ev) + rows - 1) // rows)
-    pitch = min(19, (W - 88) / cols)
-    sz = pitch * 0.8
-    last_day = None
-    for i, (st, k) in enumerate(ev):
-        c, r = divmod(i, rows)
-        x, y = x0 + c*pitch, y0 + r*pitch
-        one = WAFFLE_TYPES[k][0]
-        tip = one
-        if st:
-            lt = datetime.datetime.fromisoformat(st.replace("Z", "+00:00")).astimezone(tz)
-            tip += f" · {lt.strftime('%-d %b, %H:%M')}"
-            if lt.day != last_day:
-                if last_day is None or lt.day % 5 == 0:
-                    b.append(f'<rect class="i"{at(.8)} x="{x:.1f}" y="{y0 + rows*pitch + 2:.1f}" width="1" height="8" '
-                             f'fill="{MUTED}"/><text class="i"{at(.8)} x="{x+3:.1f}" y="{y0 + rows*pitch + 20:.1f}" '
-                             f'font-family="{MONO}" font-size="10.5" fill="{MUTED}">{lt.day}</text>')
-                last_day = lt.day
-        if k == "repo":  # new repos are stars
-            b.append(f'<g class="d"{at(.1 + c*.025)}><title>{escape(tip)}</title>'
-                     f'{star(x + sz/2, y + sz/2 + .6, sz*0.62, WAFFLE_TYPES[k][2])}</g>')
-            continue
-        outline = f' stroke="{GREY_BAR}" stroke-dasharray="2 2"' if k == "other" else ""
-        b.append(f'<rect class="d"{at(.1 + c*.025)} x="{x:.1f}" y="{y:.1f}" width="{sz:.1f}" height="{sz:.1f}" '
-                 f'rx="3" fill="{WAFFLE_TYPES[k][2]}"{outline}><title>{escape(tip)}</title></rect>')
-    if not ev:
-        b.append(f'<text x="44" y="150" font-family="{SERIF}" font-style="italic" font-size="36" fill="{MUTED}">'
-                 f'Nothing yet this month</text>')
-
+def type_counts(data, ym, total):
+    """This month's contributions counted by type. Anything GitHub counted but
+    didn't break down (private repos, time unknown) goes in "other"."""
+    ev = (data.get("month_events") or [])[:total]
     counts = {}
     for _, k in ev:
         counts[k] = counts.get(k, 0) + 1
+    if total > len(ev):
+        counts["other"] = counts.get("other", 0) + total - len(ev)
+    return counts
+
+
+def type_row(counts, prev, pname, yl):
+    """One column per contribution type: swatch and name, the count, and last month's."""
+    b = []
     keys = [k for k in WAFFLE_TYPES if counts.get(k)]
     colw = (W - 88) / max(1, len(keys))
-    yl = h - GAP - 64
     for i, k in enumerate(keys):
         one, many, col, field = WAFFLE_TYPES[k]
         n = counts[k]
@@ -522,9 +488,8 @@ def waffle_card(data):
             b.append(f'<text x="{cx + 14 + len(f"{n:,}")*15:.1f}" y="{yl+33}" font-family="{MONO}" font-size="11" '
                      f'fill="{ACCENT if up else MUTED}">{"↑ " if up else ""}{pname} {p:,}</text>')
         b.append("</g>")
-    label = (f"This month, one square per contribution in the order they happened: "
-             + ", ".join(f"{counts[k]} {WAFFLE_TYPES[k][0] if counts[k] == 1 else WAFFLE_TYPES[k][1]}" for k in keys) + ".")
-    return svg(W, h, "".join(b), ["serif", "serif-i", "sans", "mono"], label)
+    text = ", ".join(f"{counts[k]} {WAFFLE_TYPES[k][0] if counts[k] == 1 else WAFFLE_TYPES[k][1]}" for k in keys)
+    return "".join(b), text
 
 
 # ---- the rise: month by month, with the running total -------------------------
@@ -833,10 +798,9 @@ def readme_block(data):
         # the year: every day, then month by month
         img("heatmap.svg", f"Contribution graph for the year, January to December, in {ACCENT_WORD}, with the year's totals") + "<br>",
         img("rise.svg", "Contributions month by month, with the running total for the year") + "<br>",
-        # this month, zooming in: day by day, when I work, by type, in words
+        # this month, zooming in: day by day and by type, when I work, in words
         img("month.svg", "This month: contributions by day") + "<br>",
         img("week.svg", "When I work: contributions by weekday and hour of day") + "<br>",
-        img("waffle.svg", "This month, one square per contribution, coloured by type, in order") + "<br>",
         img("words.svg", "Most used words in this month's commit messages"),
         "</div>",
         "",
@@ -868,7 +832,6 @@ def main():
         write(f"hero{sfx}.svg", hero(data))
         write(f"heatmap{sfx}.svg", heatmap(data))
         write(f"month{sfx}.svg", month_card(data))
-        write(f"waffle{sfx}.svg", waffle_card(data))
         write(f"rise{sfx}.svg", rise_card(data))
         for i, t in enumerate(TILES):
             write(f"{t[0]}{sfx}.svg", tile(i, *t[1:]))
