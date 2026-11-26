@@ -1,42 +1,96 @@
 name: Refresh profile cards
 
-# Re-draws the animated SVG cards in cards/ from real contribution data.
-# Runs every hour, on every push to main, and on demand from the Actions tab.
+# Re-draws the animated SVG cards in cards/ from real contribution data, every hour.
+#
+# GitHub's cron is best effort and on this repo it fired only every 5-10 hours, so
+# the workflow keeps its own clock: one run refreshes the cards, sleeps until the
+# next :17, refreshes again, and so on for about five hours, then starts its own
+# successor (workflow_dispatch) and exits. The hourly cron stays as a backstop that
+# restarts the chain if it ever breaks. Pushes to main refresh straight away in
+# their own group, so they never wait behind a sleeping run.
 
 "on":
   schedule:
-    - cron: "17 * * * *"   # hourly, at :17 (runs on the hour are the most delayed)
+    - cron: "17 * * * *"   # backstop; the chain below does the real hourly work
   workflow_dispatch: {}
   push:
     branches: [main]
 
 permissions:
   contents: write
+  actions: write   # lets a run start its successor
+
+concurrency:
+  group: profile-cards-${{ github.event_name == 'push' && 'push' || 'clock' }}
+  cancel-in-progress: false
 
 jobs:
   cards:
     runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PROFILE_TOKEN: ${{ secrets.PROFILE_TOKEN }}   # optional: your token, so private repos count too
+      WORDS_INCLUDE_PRIVATE: "1"   # words card: also count commit messages from private repos (own and org)
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Fetch contribution data
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PROFILE_TOKEN: ${{ secrets.PROFILE_TOKEN }}   # optional: your token, so private repos count too
-          WORDS_INCLUDE_PRIVATE: "1"   # words card: also count commit messages from private repos (own and org)
-        run: python scripts/fetch_contributions.py
-
-      - name: Render cards
-        run: python scripts/render_cards.py
-
-      - name: Commit updated cards
+      - name: Refresh every hour
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A data cards README.md
-          git diff --cached --quiet || git commit -m "chore: refresh profile cards [skip ci]"
-          git push
+
+          refresh() {
+            # Start from the latest main each time, so edits pushed meanwhile are kept,
+            # and retry if someone pushed between our fetch and our push.
+            for attempt in 1 2 3; do
+              git fetch --quiet origin main
+              git reset --quiet --hard origin/main
+              python scripts/fetch_contributions.py || { echo "::warning::fetch failed"; return 0; }
+              python scripts/render_cards.py || { echo "::warning::render failed"; return 0; }
+              git add -A data cards README.md
+              if git diff --cached --quiet; then echo "no changes"; return 0; fi
+              git commit --quiet -m "chore: refresh profile cards [skip ci]"
+              if git push --quiet origin HEAD:main; then echo "pushed at $(date -u +%H:%M)"; return 0; fi
+              sleep 10
+            done
+            echo "::warning::push failed three times"
+          }
+
+          refresh
+
+          # A push only needs one refresh; the clock chain handles the hours.
+          [ "${{ github.event_name }}" = "push" ] && exit 0
+
+          start=$(date +%s)
+          while :; do
+            now=$(date +%s)
+            # seconds until the next hh:17
+            next=$(( (now / 3600) * 3600 + 17 * 60 ))
+            [ "$next" -le "$now" ] && next=$(( next + 3600 ))
+            # stop once the next refresh would land past ~5h, leaving room under the 6h job limit
+            [ $(( next - start )) -gt $(( 5 * 3600 )) ] && break
+            sleep $(( next - now ))
+            refresh
+          done
+
+      - name: Start the next run
+        if: github.event_name != 'push'
+        run: |
+          # Skip if another clock run (a cron backstop or a dispatch) is already waiting;
+          # it will carry the chain on.
+          others=$(gh api "repos/${{ github.repository }}/actions/workflows/profile-cards.yml/runs?per_page=30" \
+            --jq "[.workflow_runs[] | select(.id != ${{ github.run_id }} and .status != \"completed\" and .event != \"push\")] | length")
+          if [ "$others" -gt 0 ]; then
+            echo "another run is already queued; it takes over"
+          else
+            gh workflow run profile-cards.yml --ref main
+            echo "started the next run"
+          fi
