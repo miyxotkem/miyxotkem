@@ -368,8 +368,12 @@ def contribution_hours(token, user, personal):
         if datetime.datetime.fromisoformat(stamp.replace("Z", "+00:00")) >= month_start:
             month_hours[h] += 1
 
+    own_days = {}  # every contribution from the last year, by local day
+
     def tally_year(stamp):
         t = local_time(stamp)
+        day = t.date().isoformat()
+        own_days[day] = own_days.get(day, 0) + 1
         hours[t.hour] += 1
         week_hours[t.weekday()][t.hour] += 1
 
@@ -380,6 +384,8 @@ def contribution_hours(token, user, personal):
     commits = []  # (repo, commit) pairs, for the words and status cards
     for c in scanned.values():
         tally(c["at"])
+        day = local_date(c["at"])
+        own_days[day] = own_days.get(day, 0) + 1
         commits.append((c["repo"], {"authoredDate": c["at"], "messageHeadline": c["head"]}))
     # commits GitHub's graph leaves out (other branches, forks), by local day
     extra_days = {}
@@ -422,6 +428,13 @@ def contribution_hours(token, user, personal):
                           "repo": None if repo.get("isPrivate", True) else repo.get("name")}
     more["month_events"] = [[when(st).strftime("%Y-%m-%dT%H:%M:%SZ"), k] for st, k in events]
     more["extra_days"] = extra_days
+    more["own_days"] = own_days
+    month_commits = {}  # by local month, like the days
+    for c in scanned.values():
+        m = local_date(c["at"])[:7]
+        month_commits[m] = month_commits.get(m, 0) + 1
+    more["month_commits"] = month_commits
+    more["own_since"] = local_date(since)
     more["week_hours"] = week_hours
     return hours, month_hours, more
 
@@ -516,10 +529,44 @@ def fetch(token, personal=False):
         for w in weeks for d in w["contributionDays"]
     ]
     hours, month_hours, more = contribution_hours(token, user, personal)
-    # GitHub's graph only counts commits on default branches; add the rest
+    own, own_since = more.pop("own_days"), more.pop("own_since")
+    if not personal:
+        # Without your own token the scan can't see private repos, which the
+        # calendar does count: keep the calendar, plus commits it leaves out.
+        for d in days:
+            d["count"] += more["extra_days"].get(d["date"], 0)
+        return days, hours, month_hours, more
+    # With your token, every day is counted here from the scan: each commit
+    # once (rebased or cherry-picked copies collapse, any branch counts) plus
+    # PRs, issues, reviews and new repos, by local day. GitHub's own calendar
+    # keeps counting old commit ids after a branch is rebased and pushed again,
+    # so a rewritten history counted twice there. Days before the scan's
+    # one-year window keep the calendar's number.
+    diff = 0
     for d in days:
-        d["count"] += more["extra_days"].get(d["date"], 0)
+        if d["date"] >= own_since:
+            n = own.get(d["date"], 0)
+            diff += d["count"] - n
+            d["count"] = n
+        else:
+            d["count"] += more["extra_days"].get(d["date"], 0)
+    # local time can already be a day past the calendar's last day
+    last = datetime.date.fromisoformat(days[-1]["date"]) if days else None
+    for day in sorted(own):
+        if last and day > last.isoformat():
+            days.append({"date": day, "count": own[day], "level": 0})
+    relevel(days)
+    print(f"calendar had {diff} more than the scan over the last year", file=sys.stderr)
     return days, hours, month_hours, more
+
+
+def relevel(days):
+    """Quartile levels (1-4) over the active days, like GitHub's graph."""
+    active = sorted(d["count"] for d in days if d["count"] > 0)
+    cuts = [active[len(active) * q // 4] for q in (1, 2, 3)] if active else [0, 0, 0]
+    for d in days:
+        c = d["count"]
+        d["level"] = 0 if c == 0 else 1 + sum(c >= x for x in cuts)
 
 
 # Roughly your real shape (from the old productive-time card), for offline previews.
@@ -589,7 +636,10 @@ def main():
     elif token:
         days, hours, month_hours, more = fetch(token, bool(personal))
         month = month_counts(token)
-        if month:  # commits only on other branches or forks count too
+        if month and personal:  # commits from the scan, so each counts once (any branch)
+            for part in (month, month["prev"]):
+                part["counts"]["commits"] = more["month_commits"].get(part["month"], 0)
+        elif month:  # commits only on other branches or forks count too
             extra = more.get("extra_days", {})
             for part in (month, month["prev"]):
                 part["counts"]["commits"] += sum(v for k, v in extra.items() if k.startswith(part["month"]))
